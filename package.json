@@ -1,0 +1,11 @@
+{
+  "name": "formtexter",
+  "version": "1.0.0",
+  "description": "FormTexter - Firefox WebExtension zur Automatisierung von Formularen",
+  "scripts": {
+    "start": "http-server -p 8000 --cors"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

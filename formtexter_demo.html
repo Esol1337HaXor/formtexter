@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormTexter Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    form {
+      background-color: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin: 12px 0 4px 0;
+      font-weight: 600;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .checkbox-group {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+    .checkbox-group label {
+      display: block;
+      padding: 4px 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+    .checkbox-group label:hover {
+      color: #007bff;
+    }
+    .testing-notes {
+      background-color: #e7f5ff;
+      padding: 15px;
+      border-left: 4px solid #007bff;
+      margin: 20px 0;
+    }
+    .testing-notes ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .expected-result {
+      font-family: monospace;
+      background-color: #f0f0f0;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FormTexter Demo</h1>
+
+  <div class="testing-notes">
+    <h2>Anleitung für Tests</h2>
+    <p><strong>Wie FormTexter funktioniert:</strong></p>
+    <ul>
+      <li>Das Plugin liest den Inhalt des Textfelds <span class="expected-result">"Interessen"</span> aus.</li>
+      <li>Kommagetrennte Begriffe werden einzelnen Checkboxen zugeordnet.</li>
+      <li>Beispiel: <span class="expected-result">"Newsletter, Technik"</span> → aktiviert Checkboxen <span class="expected-result">"Newsletter abonnieren"</span> und <span class="expected-result">"Technik-Updates"</span>.</li>
+    </ul>
+    <p><strong>Testablauf:</strong></p>
+    <ol>
+      <li>Stellen Sie sicher, dass das Plugin in Firefox geladen ist (<code>about:debugging</code>).</li>
+      <li>Klicken Sie auf das FormTexter-Icon in der Firefox-Toolbar.</li>
+      <li>Wählen Sie das Textfeld <strong>"Interessen"</strong> per Klick aus.</li>
+      <li>Erstellen Sie Zuordnungen (z. B. <span class="expected-result">"Newsletter" → Checkbox "Newsletter abonnieren"</span>).</li>
+      <li>Geben Sie Text ein und prüfen Sie, ob die Checkboxen aktiviert werden.</li>
+    </ol>
+  </div>
+
+  <form id="demo-form">
+    <div class="form-group">
+      <label for="interests">Interessen (kommagetrennt):</label>
+      <textarea id="interests" placeholder="Beispiel: Newsletter, Technik, Sport"></textarea>
+    </div>
+
+    <div class="checkbox-group">
+      <p>Welche Inhalte möchten Sie erhalten?</p>
+      <label>
+        <input type="checkbox" id="newsletter_chk">
+        Newsletter abonnieren
+      </label>
+      <label>
+        <input type="checkbox" id="tech_chk">
+        Technik-Updates
+      </label>
+      <label>
+        <input type="checkbox" id="sports_chk">
+        Sport-News
+      </label>
+      <label>
+        <input type="checkbox" id="special_offers_chk">
+        Sonderangebote
+      </label>
+      <label>
+        <input type="checkbox" id="events_chk">
+        Einladungen zu Events
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label for="feedback">Feedback (optional):</label>
+      <input type="text" id="feedback" placeholder="Ihre Meinung...">
+    </div>
+  </form>
+</body>
+</html>
