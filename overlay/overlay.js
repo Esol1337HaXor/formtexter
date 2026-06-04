@@ -1,4 +1,4 @@
-// Overlay-JavaScript für FormTexter-Erweiterung
++// Overlay-JavaScript für FormTexter-Erweiterung
 // Verantwortlich für: UI-Interaktion, DOM-Auswahl, Zuordnungsverwaltung
 
 // Zustand des Overlays
@@ -480,12 +480,6 @@ function closeOverlay() {
   document.querySelectorAll('.formtexter-checkbox-highlight').forEach(el => {
     el.classList.remove('formtexter-checkbox-highlight');
   });
-
-  // Dimmed Layer entfernen
-  const dimmedLayer = document.querySelector('.formtexter-overlay-dimmed');
-  if (dimmedLayer) {
-    dimmedLayer.remove();
-  }
 
   // Overlay aus dem DOM entfernen
   const overlay = document.getElementById('formtexter-overlay');

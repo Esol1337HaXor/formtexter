@@ -1,4 +1,4 @@
-/* Overlay-Stile für FormTexter - Sidebar am rechten Rand */
+/* Overlay-Panel als fixed Sidebar am rechten Rand */
 .formtexter-overlay-container {
   position: fixed;
   top: 0;
@@ -7,32 +7,12 @@
   height: 100%;
   background-color: #f8f9fa;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-  z-index: 999999;
+  z-index: 2147483647; /* Max. z-index für Browser Extension */
   display: flex;
   flex-direction: column;
   font-size: 14px;
   overflow-y: auto;
   /* NUR das Overlay empfängt Events - Seite bleibt interaktiv */
-  pointer-events: auto;
-}
-
-/* Dimmed overlay layer - blockiert Interaktion */
-.formtexter-overlay-dimmed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 380px;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.1);
-  z-index: 999998;
-  pointer-events: auto; /* Blockiert Events IM dimmed Bereich */
-}
-
-/* Alle Inhalte der Overlay-Panel bleiben interaktiv */
-.formtexter-overlay-content,
-.formtexter-overlay-header,
-.formtexter-overlay-tabs,
-.formtexter-overlay-footer {
   pointer-events: auto;
 }
 

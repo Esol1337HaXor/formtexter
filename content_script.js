@@ -66,12 +66,6 @@ function openOverlay() {
     .then(html => {
       const overlayDiv = document.createElement('div');
       overlayDiv.id = 'formtexter-overlay';
-      
-      // Dimmed Layer erstellen (blockiert Interaktion im Overlay-Bereich)
-      const dimmedLayer = document.createElement('div');
-      dimmedLayer.className = 'formtexter-overlay-dimmed';
-      document.body.appendChild(dimmedLayer);
-      
       overlayDiv.innerHTML = html;
       document.body.appendChild(overlayDiv);
 
