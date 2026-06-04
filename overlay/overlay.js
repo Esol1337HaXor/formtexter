@@ -481,8 +481,20 @@ function closeOverlay() {
     el.classList.remove('formtexter-checkbox-highlight');
   });
 
+  // Dimmed Layer entfernen
+  const dimmedLayer = document.querySelector('.formtexter-overlay-dimmed');
+  if (dimmedLayer) {
+    dimmedLayer.remove();
+  }
+
   // Overlay aus dem DOM entfernen
-  document.getElementById('formtexter-overlay').remove();
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+
+  // Cursor zurücksetzen
+  document.body.style.cursor = '';
 
   // Loggen
   logEvent('info', 'Overlay geschlossen');

@@ -12,29 +12,28 @@
   flex-direction: column;
   font-size: 14px;
   overflow-y: auto;
-  /* Keine Blockierung der Interaktion mit der Seite */
+  /* NUR das Overlay empfängt Events - Seite bleibt interaktiv */
   pointer-events: auto;
 }
 
-/* Hintergrund-Dimming - nur schmaler Streifen am Rand */
-.formtexter-overlay-container::before {
-  content: '';
+/* Dimmed overlay layer - blockiert Interaktion */
+.formtexter-overlay-dimmed {
   position: fixed;
   top: 0;
   left: 0;
   right: 380px;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.15);
-  z-index: -1;
-  pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 999998;
+  pointer-events: auto; /* Blockiert Events IM dimmed Bereich */
 }
 
-/* Alle Inhalte der Seite bleiben interaktiv */
-.formtexter-overlay-content {
+/* Alle Inhalte der Overlay-Panel bleiben interaktiv */
+.formtexter-overlay-content,
+.formtexter-overlay-header,
+.formtexter-overlay-tabs,
+.formtexter-overlay-footer {
   pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
 }
 
 .formtexter-overlay-header {
