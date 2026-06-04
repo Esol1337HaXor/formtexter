@@ -69,10 +69,10 @@ function openOverlay() {
       overlayDiv.innerHTML = html;
       document.body.appendChild(overlayDiv);
 
-      // Overlay-CSS einfügen
+      // Overlay-CSS einfügen (mit Cache-Buster)
       const styleLink = document.createElement('link');
       styleLink.rel = 'stylesheet';
-      styleLink.href = browser.runtime.getURL('overlay/overlay.css');
+      styleLink.href = browser.runtime.getURL('overlay/overlay.css') + '?v=' + Date.now();
       document.head.appendChild(styleLink);
 
       // Overlay-JS laden und initialisieren
