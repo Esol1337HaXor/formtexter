@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FormTexter Konfiguration</title>
   <style>
-    /* Grundlegende Stile werden später via overlay.css eingebunden */
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
@@ -41,8 +40,8 @@
         <div class="formtexter-instructions">
           <h2>Freitextfeld auswählen</h2>
           <p>
-            Klicken Sie auf das Freitextfeld in Ihrem Formular<br>
-            (z. B. ein <code><textarea></code> oder <code><input type="text"></code>).
+            Klicken Sie unten auf den Button. Das Overlay wird ausgeblendet.<br>
+            Klicken Sie dann auf das Freitextfeld in Ihrem Formular.
           </p>
         </div>
 
@@ -51,13 +50,13 @@
         </div>
 
         <div class="formtexter-field-identifier">
-          <label for="field-id-input">ODER: Feld-ID manuell eingeben:</label>
+          <label for="field-id-input">Feld-ID eingeben (optional):</label>
           <input type="text" id="field-id-input" placeholder="z. B. 'interests'">
         </div>
 
         <div class="formtexter-action-buttons">
-          <button id="select-field-button" class="formtexter-button">
-            Feld manuell auswählen (klicken und dann auf das Feld)
+          <button id="select-field-button" class="formtexter-button formtexter-primary">
+            🔍 Freitextfeld auswählen (Cursor ändern)
           </button>
         </div>
       </div>
@@ -130,7 +129,6 @@
 
   <script>
     // Platzhalter für Overlay-JavaScript
-    // Wird später über overlay.js geladen
   </script>
 </body>
 </html>

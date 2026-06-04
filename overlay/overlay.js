@@ -85,12 +85,19 @@ function setupTabs() {
 
 /**
  * Aktiviert den Modus zur Auswahl eines Freitextfelds
+ * Blendet das Overlay aus, damit der Benutzer auf die Seite klicken kann
  */
 function enterFieldSelectionMode() {
   state.fieldSelectionMode = true;
-  elements.selectedFieldInfo.textContent = 'Klicken Sie jetzt auf das Freitextfeld...';
+  elements.selectedFieldInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf das Freitextfeld...';
 
-  // CSS-Klasse für Hervorhebung hinzufügen
+  // Overlay temporär ausblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+
+  // Cursor auf crosshair setzen für den Fall, dass doch etwas sichtbar ist
   document.body.style.cursor = 'crosshair';
 
   // Event-Listener temporär hinzufügen
@@ -108,7 +115,7 @@ function enterFieldSelectionMode() {
 function handleFieldSelection(event) {
   state.fieldSelectionMode = false;
   document.body.style.cursor = '';
-  elements.selectFieldButton.textContent = 'Feld manuell auswählen (klicken und dann auf das Feld)';
+  elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen (Cursor ändern)';
   elements.selectFieldButton.onclick = enterFieldSelectionMode;
 
   const target = event.target;
@@ -116,6 +123,11 @@ function handleFieldSelection(event) {
 
   // Prüfen, ob das Element ein gültiges Textfeld ist
   if (!isValidTextField(target)) {
+    // Overlay wieder einblenden
+    const overlay = document.getElementById('formtexter-overlay');
+    if (overlay) {
+      overlay.style.display = '';
+    }
     alert('Bitte wählen Sie ein Freitextfeld (Textarea oder Input) aus.');
     elements.selectedFieldInfo.textContent = 'Kein Feld ausgewählt';
     return;
@@ -123,11 +135,17 @@ function handleFieldSelection(event) {
 
   // ID des Felds verwenden oder generieren
   state.textFieldId = target.id || `formtexter-field-${Date.now()}`;
-  elements.selectedFieldInfo.textContent = `Feld ausgewählt: ID '${state.textFieldId}', Typ: ${target.tagName}`;
+  elements.selectedFieldInfo.textContent = `✅ Feld ausgewählt: ID '${state.textFieldId}', Typ: ${target.tagName}`;
 
   // Wenn das Feld keine ID hat, diese setzen (falls möglich)
   if (!target.id) {
     target.id = state.textFieldId;
+  }
+
+  // Overlay wieder einblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = '';
   }
 
   // Loggen
@@ -153,8 +171,14 @@ function isValidTextField(element) {
 function cancelFieldSelection() {
   state.fieldSelectionMode = false;
   document.body.style.cursor = '';
-  elements.selectFieldButton.textContent = 'Feld manuell auswählen (klicken und dann auf das Feld)';
+  elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen (Cursor ändern)';
   elements.selectFieldButton.onclick = enterFieldSelectionMode;
+
+  // Overlay wieder einblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = '';
+  }
 }
 
 /**
@@ -176,12 +200,19 @@ function handleFieldIdInput() {
 
 /**
  * Aktiviert den Modus zur Auswahl einer Checkbox
+ * Blendet das Overlay aus, damit der Benutzer auf die Seite klicken kann
  */
 function enterCheckboxSelectionMode() {
   state.checkboxSelectionMode = true;
-  elements.newCheckboxInfo.textContent = 'Klicken Sie jetzt auf eine Checkbox...';
+  elements.newCheckboxInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf eine Checkbox...';
 
-  // CSS-Klasse für Hervorhebung hinzufügen
+  // Overlay temporär ausblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+
+  // Cursor auf crosshair setzen
   document.body.style.cursor = 'crosshair';
 
   // Event-Listener temporär hinzufügen
@@ -204,6 +235,12 @@ function handleCheckboxSelection(event) {
 
   const target = event.target;
   state.selectedCheckbox = target;
+
+  // Overlay wieder einblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = '';
+  }
 
   // Prüfen, ob das Element eine Checkbox ist
   if (!isCheckbox(target)) {
@@ -250,6 +287,12 @@ function cancelCheckboxSelection() {
   document.body.style.cursor = '';
   elements.selectCheckboxButton.textContent = 'Checkbox auswählen';
   elements.selectCheckboxButton.onclick = enterCheckboxSelectionMode;
+
+  // Overlay wieder einblenden
+  const overlay = document.getElementById('formtexter-overlay');
+  if (overlay) {
+    overlay.style.display = '';
+  }
 }
 
 /**
