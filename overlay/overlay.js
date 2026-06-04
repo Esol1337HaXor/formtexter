@@ -91,13 +91,13 @@ function enterFieldSelectionMode() {
   state.fieldSelectionMode = true;
   elements.selectedFieldInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf das Freitextfeld...';
 
-  // Overlay temporär ausblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = 'none';
+  // Overlay temporär ausblenden (das innere Panel)
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = 'none';
   }
 
-  // Cursor auf crosshair setzen für den Fall, dass doch etwas sichtbar ist
+  // Cursor auf crosshair setzen
   document.body.style.cursor = 'crosshair';
 
   // Event-Listener temporär hinzufügen
@@ -124,9 +124,9 @@ function handleFieldSelection(event) {
   // Prüfen, ob das Element ein gültiges Textfeld ist
   if (!isValidTextField(target)) {
     // Overlay wieder einblenden
-    const overlay = document.getElementById('formtexter-overlay');
-    if (overlay) {
-      overlay.style.display = '';
+    const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+    if (overlayPanel) {
+      overlayPanel.style.display = '';
     }
     alert('Bitte wählen Sie ein Freitextfeld (Textarea oder Input) aus.');
     elements.selectedFieldInfo.textContent = 'Kein Feld ausgewählt';
@@ -143,9 +143,9 @@ function handleFieldSelection(event) {
   }
 
   // Overlay wieder einblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = '';
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = '';
   }
 
   // Loggen
@@ -175,9 +175,9 @@ function cancelFieldSelection() {
   elements.selectFieldButton.onclick = enterFieldSelectionMode;
 
   // Overlay wieder einblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = '';
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = '';
   }
 }
 
@@ -207,9 +207,9 @@ function enterCheckboxSelectionMode() {
   elements.newCheckboxInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf eine Checkbox...';
 
   // Overlay temporär ausblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = 'none';
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = 'none';
   }
 
   // Cursor auf crosshair setzen
@@ -237,9 +237,9 @@ function handleCheckboxSelection(event) {
   state.selectedCheckbox = target;
 
   // Overlay wieder einblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = '';
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = '';
   }
 
   // Prüfen, ob das Element eine Checkbox ist
@@ -289,9 +289,9 @@ function cancelCheckboxSelection() {
   elements.selectCheckboxButton.onclick = enterCheckboxSelectionMode;
 
   // Overlay wieder einblenden
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.style.display = '';
+  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
+  if (overlayPanel) {
+    overlayPanel.style.display = '';
   }
 }
 
