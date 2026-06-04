@@ -57,6 +57,16 @@ const { chromium } = require('playwright');
       console.log(`    - ID: ${id}, Label: ${label}`);
     }
     
+    // Test 4: Bestehenden Text verarbeiten (Copy-Paste-Szenario)
+    console.log('\nTest 4: Bestehender Text wird verarbeitet');
+    await page.fill('#interests', 'Sport, Sonderangebote');
+    
+    const newTextValue = await page.locator('#interests').inputValue();
+    console.log(`  Neuer Text: "${newTextValue}"`);
+    
+    // Warten auf Debouncing (300ms + Puffer)
+    await page.waitForTimeout(500);
+    
     console.log('\n=== Test abgeschlossen ===');
     console.log('\nHinweis: Da die Firefox-Extension im Browser nicht geladen ist,');
     console.log('funktioniert die automatische Checkbox-Aktivierung nicht.');

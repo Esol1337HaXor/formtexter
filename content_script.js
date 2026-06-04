@@ -105,6 +105,13 @@ function applyMappingsFromTextField(mappings) {
     return;
   }
 
+  // Bestehenden Text SOFORT verarbeiten (wichtig für Copy-Paste / Seiten-Reload)
+  const existingText = textField.value;
+  if (existingText.trim()) {
+    logEvent('info', `Bestehender Text im Feld '${mappings.textFieldId}' verarbeitet: "${existingText}"`);
+    applyCheckboxMappings(existingText, mappings.mappings);
+  }
+
   // Event-Listener für Textänderungen mit Debouncing (300ms)
   textField.addEventListener('input', (event) => {
     // Vorherigen Timer löschen
