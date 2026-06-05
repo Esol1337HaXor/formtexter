@@ -69,6 +69,9 @@ function openOverlay() {
       overlayDiv.innerHTML = html;
       document.body.appendChild(overlayDiv);
 
+      // Overlay sichtbar machen (wichtig!)
+      overlayDiv.style.display = 'block';
+
       // Overlay-CSS einfügen (mit Cache-Buster)
       const styleLink = document.createElement('link');
       styleLink.rel = 'stylesheet';
