@@ -2,24 +2,25 @@
    FormTexter Overlay - Sidebar am rechten Rand
    ============================================================ */
 
-/* Der Root-Container - wird von content_script.js als wrapper erstellt */
+/* Wrapper - keine position, nur Sichtbarkeit */
 #formtexter-overlay {
-  display: block;
+  display: none;
+  /* KEIN position: fixed, KEIN z-index - das hat das Problem verursacht! */
 }
 
-/* Das eigentliche Overlay-Panel - fixed position am rechten Rand */
+/* Das eigentliche Overlay-Panel */
 #formtexter-overlay .formtexter-overlay-container {
   position: fixed;
   top: 0;
   right: 0;
-  width: 380px;
+  width: 350px;
   height: 100vh;
-  background-color: #f8f9fa;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-  z-index: 214748364; /* 10x niedriger als max - Firefox kompatibel */
+  background-color: #fff;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+  z-index: 214748364;
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: 13px;
   overflow-y: auto;
 }
 
