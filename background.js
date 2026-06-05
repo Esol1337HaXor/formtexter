@@ -1,21 +1,46 @@
 // Hintergrundskript für FormTexter-Erweiterung
 // Verantwortlich für: Speicherung, Logging, Kommunikation mit Content Script
+// URL-basierte Architektur (05.06.2026)
 
 /**
- * Speichert Zuordnungen pro Website
+ * Generiert einen Schlüssel für die Website-basierte Speicherung
+ * @param {string} url - Vollständige URL
+ * @returns {string} Normalisierter Schlüssel
+ */
+function getSiteKey(url) {
+  try {
+    const urlObj = new URL(url);
+    // Domain + erster Pfadabschnitt (z.B. "cas.de/formular")
+    return urlObj.hostname + urlObj.pathname.split('/')[1];
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Speichert Zuordnungen pro Website (URL-basiert)
  * @param {string} url - Aktuelle Website-URL
- * @param {Object} data - Zuordnungsdaten { textFieldId: string, mappings: { [term: string]: string } }
+ * @param {Object} data - Zuordnungsdaten
  */
 async function saveMappings(url, data) {
   try {
     const siteKey = getSiteKey(url);
-    const storageData = await browser.storage.local.get(siteKey);
-    const updatedData = { ...storageData, [siteKey]: data };
 
-    await browser.storage.local.set(updatedData);
-    await logEvent('info', `Zuordnungen für ${siteKey} aktualisiert`, url);
+    // Bestehende urlConfigs laden
+    const storageData = await browser.storage.local.get('urlConfigs');
+    const urlConfigs = storageData.urlConfigs || {};
+
+    // Neue Konfiguration hinzufügen/aktualisieren
+    urlConfigs[siteKey] = {
+      ...data,
+      savedAt: new Date().toISOString(),
+      url: url // Original-URL speichern für Wildcard-Matching
+    };
+
+    await browser.storage.local.set({ urlConfigs });
+    await logEvent('info', `Zuordnungen für ${siteKey} gespeichert`, url);
   } catch (error) {
-    await logEvent('error', `Fehler beim Speichern der Zuordnungen: ${error.message}`, url);
+    await logEvent('error', `Fehler beim Speichern: ${error.message}`, url);
   }
 }
 
@@ -27,19 +52,74 @@ async function saveMappings(url, data) {
 async function loadMappings(url) {
   try {
     const siteKey = getSiteKey(url);
-    const storageData = await browser.storage.local.get(siteKey);
-    return storageData[siteKey] || null;
+
+    const storageData = await browser.storage.local.get('urlConfigs');
+    const urlConfigs = storageData.urlConfigs || {};
+
+    // 1. Exakter Match
+    if (urlConfigs[siteKey]) return urlConfigs[siteKey];
+
+    // 2. Wildcard-Match (*.cas.de)
+    const urlObj = new URL(url);
+    const domainParts = urlObj.hostname.split('.');
+    for (let i = 0; i < domainParts.length - 1; i++) {
+      const wildcardKey = '*' + domainParts.slice(i).join('.');
+      if (urlConfigs[wildcardKey]) return urlConfigs[wildcardKey];
+    }
+
+    return null;
   } catch (error) {
-    await logEvent('error', `Fehler beim Laden der Zuordnungen: ${error.message}`, url);
+    await logEvent('error', `Fehler beim Laden: ${error.message}`, url);
     return null;
   }
 }
 
 /**
- * Loggt ein Ereignis in den Browser-Storage
- * @param {string} level - Log-Level ('info', 'warn', 'error')
- * @param {string} message - Log-Nachricht
+ * Sucht ähnliche Konfigurationen (Smart Defaults)
  * @param {string} url - Aktuelle URL
+ * @returns {Array} Ähnliche Konfigurationen
+ */
+async function findSimilarConfigs(url) {
+  try {
+    const storageData = await browser.storage.local.get('urlConfigs');
+    const urlConfigs = storageData.urlConfigs || {};
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
+
+    const similar = [];
+    for (const [key, config] of Object.entries(urlConfigs)) {
+      // Gleiche Domain-Endung oder gemeinsamer Pfad
+      if (domain.endsWith(key.split('.')[0]) || (config.url && new URL(config.url).pathname.split('/')[1] === urlObj.pathname.split('/')[1])) {
+        similar.push({ key, ...config });
+      }
+    }
+    return similar.slice(0, 5); // Max 5 Vorschläge
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Löscht Zuordnungen für eine spezifische URL
+ * @param {string} url - Website-URL
+ */
+async function deleteConfig(url) {
+  try {
+    const siteKey = getSiteKey(url);
+
+    const storageData = await browser.storage.local.get('urlConfigs');
+    const urlConfigs = storageData.urlConfigs || {};
+
+    delete urlConfigs[siteKey];
+    await browser.storage.local.set({ urlConfigs });
+    await logEvent('info', `Konfiguration für ${siteKey} gelöscht`, url);
+  } catch (error) {
+    await logEvent('error', `Fehler beim Löschen: ${error.message}`, url);
+  }
+}
+
+/**
+ * Loggt ein Ereignis in den Browser-Storage
  */
 async function logEvent(level, message, url) {
   try {
@@ -47,7 +127,7 @@ async function logEvent(level, message, url) {
       timestamp: new Date().toISOString(),
       level,
       message,
-      url
+      url: url || ''
     };
 
     const logs = await browser.storage.local.get('formtexter_logs');
@@ -65,57 +145,34 @@ async function logEvent(level, message, url) {
   }
 }
 
-/**
- * Generiert einen Schlüssel für die Website-basierte Speicherung
- * @param {string} url - Vollständige URL
- * @returns {string} Normalisierter Schlüssel
- */
-function getSiteKey(url) {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.hostname + urlObj.pathname;
-  } catch {
-    return url;
-  }
-}
-
-/**
- * Prüft, ob ein DOM-Element eine Checkbox ist
- * @param {HTMLElement} element - DOM-Element
- * @returns {boolean}
- */
-function isCheckbox(element) {
-  return element.tagName === 'INPUT' &&
-         (element.type === 'checkbox' || element.type === 'radio');
-}
-
-// Single Message-Listener für Kommunikation mit dem Content Script
+// Message-Listener für Kommunikation mit dem Content Script
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const url = sender.tab ? sender.tab.url : null;
+  const url = sender.tab ? sender.tab.url : (request.url || null);
 
-  // Debug: Logs abrufen (kein URL required)
+  // Debug: Logs abrufen
   if (request.action === 'debugGetLogs') {
     browser.storage.local.get('formtexter_logs').then((data) => {
-      console.log('Logs:', data.formtexter_logs);
       sendResponse({ success: true, logs: data.formtexter_logs });
     });
-    return true; // Asynchron antworten
+    return true;
   }
 
-  // Log-Event vom Content Script empfangen und speichern
+  // Log-Event vom Content Script empfangen
   if (request.action === 'logEvent' && request.data) {
     logEvent(request.data.level, request.data.message, url).then(() => {
       sendResponse({ success: true });
     }).catch(error => {
       sendResponse({ success: false, error: error.message });
     });
-    return true; // Asynchron antworten
+    return true;
   }
 
-  // Nur verarbeiten, wenn URL verfügbar
-  if (!url) {
-    sendResponse({ success: false, error: 'Keine URL verfügbar' });
-    return;
+  // Konfiguration finden (Smart Defaults)
+  if (request.action === 'findSimilarConfigs' && request.url) {
+    findSimilarConfigs(request.url).then(similar => {
+      sendResponse({ success: true, configs: similar });
+    });
+    return true;
   }
 
   const action = request.action;
@@ -127,7 +184,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }).catch(error => {
         sendResponse({ success: false, error: error.message });
       });
-      return true; // Asynchron antworten
+      return true;
 
     case 'loadMappings':
       loadMappings(url).then(mappings => {
@@ -135,19 +192,22 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
       return true;
 
+    case 'deleteConfig':
+      deleteConfig(url).then(() => {
+        sendResponse({ success: true });
+      });
+      return true;
+
     case 'applyMappings':
-      // Wird vom Content Script direkt gehandhabt
       sendResponse({ success: true });
       break;
   }
 });
 
-// Browser-Action Listener im Hintergrundscript registrieren
-// (Content Scripts haben keinen Zugriff auf browserAction)
+// Browser-Action Listener
 if (browser.browserAction) {
   browser.browserAction.onClicked.addListener(async (tab) => {
     try {
-      // Content Script der aktiven Seite benachrichtigen
       await browser.tabs.sendMessage(tab.id, { action: 'openOverlay' });
       await logEvent('info', 'Overlay via Background Script geöffnet', tab.url);
     } catch (error) {
@@ -155,3 +215,15 @@ if (browser.browserAction) {
     }
   });
 }
+
+// Content Script Initialisierung (alle URLs)
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    // Content Script prüfen (falls noch nicht injiziert)
+    try {
+      await browser.tabs.sendMessage(tabId, { action: 'ping' });
+    } catch {
+      // Content Script noch nicht geladen - kein Problem, wird automatisch geladen
+    }
+  }
+});

@@ -4,131 +4,151 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FormTexter Konfiguration</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-  </style>
+  <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
-  <div class="formtexter-overlay-container">
-    <div class="formtexter-overlay-header">
-      <h1>FormTexter Konfiguration</h1>
-      <button id="close-overlay" class="formtexter-button formtexter-icon-button" aria-label="Schließen">
-        &times;
-      </button>
-    </div>
+  <!-- Header -->
+  <div class="ftx-overlay-header">
+    <h1>FormTexter Konfiguration</h1>
+    <button id="close-overlay" class="ftx-button ftx-icon-button" aria-label="Schließen">&times;</button>
+  </div>
 
-    <div class="formtexter-overlay-tabs">
-      <button id="tab-setup" class="formtexter-tab-button active" data-tab="setup">
-        Einrichtung
-      </button>
-      <button id="tab-mappings" class="formtexter-tab-button" data-tab="mappings">
-        Zuordnungen
-      </button>
-      <button id="tab-settings" class="formtexter-tab-button" data-tab="settings">
-        Einstellungen
-      </button>
-    </div>
+  <!-- Tabs -->
+  <div class="ftx-overlay-tabs">
+    <button id="tab-url" class="ftx-tab-button active" data-tab="url">URL-Erkennung</button>
+    <button id="tab-checkboxes" class="ftx-tab-button" data-tab="checkboxes">Checkboxen</button>
+    <button id="tab-mappings" class="ftx-tab-button" data-tab="mappings">Zuordnungen</button>
+  </div>
 
-    <div class="formtexter-overlay-content">
-      <!-- Tab: Einrichtung -->
-      <div id="tab-content-setup" class="formtexter-tab-content active">
-        <div class="formtexter-instructions">
-          <h2>Freitextfeld auswählen</h2>
-          <p>
-            Klicken Sie unten auf den Button. Das Overlay wird ausgeblendet.<br>
-            Klicken Sie dann auf das Freitextfeld in Ihrem Formular.
-          </p>
-        </div>
+  <!-- Tab Content -->
+  <div class="ftx-overlay-content">
 
-        <div class="formtexter-selected-field">
-          <p id="selected-field-info">Kein Feld ausgewählt</p>
-        </div>
-
-        <div class="formtexter-field-identifier">
-          <label for="field-id-input">Feld-ID eingeben (optional):</label>
-          <input type="text" id="field-id-input" placeholder="z. B. 'interests'">
-        </div>
-
-        <div class="formtexter-action-buttons">
-          <button id="select-field-button" class="formtexter-button formtexter-primary">
-            🔍 Freitextfeld auswählen (Cursor ändern)
-          </button>
-        </div>
+    <!-- Tab: URL-Erkennung -->
+    <div id="tab-content-url" class="ftx-tab-content active">
+      <div class="ftx-instructions">
+        <h2>URL-Erkennung</h2>
+        <p>Die Konfiguration wird automatisch für diese URL gespeichert.</p>
       </div>
 
-      <!-- Tab: Zuordnungen -->
-      <div id="tab-content-mappings" class="formtexter-tab-content">
-        <div class="formtexter-instructions">
-          <h2>Zuordnungen erstellen</h2>
-          <p>
-            Verknüpfen Sie Begriffe aus dem Freitextfeld mit Checkboxen:<br>
-            Beispiel: <code>Sitzheizung → Winterpaket</code>
-          </p>
-        </div>
-
-        <div class="formtexter-mappings-container">
-          <table id="mappings-table" class="formtexter-mappings-table">
-            <thead>
-              <tr>
-                <th>Begriff (Freitext)</th>
-                <th>Checkbox (Ziel)</th>
-                <th>Aktion</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Dynamisch befüllt via JavaScript -->
-            </tbody>
-          </table>
-
-          <div class="formtexter-add-mapping">
-            <input type="text" id="new-term-input" placeholder="Begriff (z. B. 'Sitzheizung')">
-            <span class="formtexter-mapping-separator">→</span>
-            <span id="new-checkbox-info">Wähle eine Checkbox</span>
-            <button id="select-checkbox-button" class="formtexter-button">
-              Checkbox auswählen
-            </button>
-            <button id="add-mapping-button" class="formtexter-button">
-              Zuordnung hinzufügen
-            </button>
-          </div>
-        </div>
+      <div class="ftx-url-display">
+        <label>Aktuelle URL:</label>
+        <code id="current-url">Lade...</code>
       </div>
 
-      <!-- Tab: Einstellungen -->
-      <div id="tab-content-settings" class="formtexter-tab-content">
-        <div class="formtexter-settings-section">
-          <h2>Allgemeine Einstellungen</h2>
+      <div id="config-status" class="ftx-config-status">
+        <p id="config-status-text">Keine Konfiguration gefunden</p>
+        <button id="btn-create-config" class="ftx-button ftx-primary" style="display:none;">
+          Neue Konfiguration erstellen
+        </button>
+        <button id="btn-load-config" class="ftx-button" style="display:none;">
+          Konfiguration laden
+        </button>
+        <button id="btn-delete-config" class="ftx-button ftx-danger" style="display:none;">
+          🗑 Konfiguration löschen
+        </button>
+      </div>
 
-          <div class="formtexter-settings-option">
-            <label>
-              <input type="checkbox" id="auto-apply-checkbox">
-              Zuordnungen automatisch anwenden (bei Textänderung)
-            </label>
-            <p class="formtexter-description">
-              Wenn aktiviert, werden Checkboxen sofort aktualisiert, wenn sich der Text ändert.
-            </p>
-          </div>
-        </div>
+      <div id="similar-configs" class="ftx-similar-configs" style="display:none;">
+        <details>
+          <summary>Ähnliche Konfigurationen (Smart Defaults)</summary>
+          <ul id="similar-list"></ul>
+        </details>
       </div>
     </div>
 
-    <div class="formtexter-overlay-footer">
-      <button id="save-button" class="formtexter-button formtexter-primary">
-        Speichern und Schließen
-      </button>
-      <button id="cancel-button" class="formtexter-button">
-        Abbrechen
-      </button>
+    <!-- Tab: Checkboxen -->
+    <div id="tab-content-checkboxes" class="ftx-tab-content">
+      <div class="ftx-instructions">
+        <h2>Freitextfeld auswählen</h2>
+        <p>
+          Klicken Sie auf den Button, dann auf das Freitextfeld in Ihrem Formular.<br>
+          Alle Checkboxen auf der Seite werden automatisch erkannt.
+        </p>
+      </div>
+
+      <div class="ftx-selected-field">
+        <p id="selected-field-info">Kein Feld ausgewählt</p>
+      </div>
+
+      <div class="ftx-action-buttons">
+        <button id="select-field-button" class="ftx-button ftx-primary">
+          🔍 Freitextfeld auswählen
+        </button>
+      </div>
+
+      <div class="ftx-checkboxes-section">
+        <h3>Erkannte Checkboxen</h3>
+        <p id="checkboxes-info">Wählen Sie zuerst ein Freitextfeld.</p>
+
+        <table id="checkboxes-table" class="ftx-checkboxes-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Auswählen</th>
+              <th>Checkbox-ID</th>
+              <th>Labels</th>
+              <th>Nähe zum Feld</th>
+            </tr>
+          </thead>
+          <tbody id="checkboxes-tbody">
+            <!-- Dynamisch -->
+          </tbody>
+        </table>
+
+        <button id="refresh-checkboxes" class="ftx-button" style="display:none;">
+          🔄 Checkboxen neu scannen
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: Zuordnungen -->
+    <div id="tab-content-mappings" class="ftx-tab-content">
+      <div class="ftx-instructions">
+        <h2>Begriffe zuordnen</h2>
+        <p>
+          Begriffe werden automatisch aus dem Freitextfeld extrahiert.<br>
+          Ordnen Sie sie den Checkboxen zu.
+        </p>
+      </div>
+
+      <div class="ftx-mappings-section">
+        <h3>Extrahierte Begriffe</h3>
+        <div id="terms-container" class="ftx-terms-container">
+          <p id="terms-info">Keine Begriffe verfügbar. Zuerst Freitextfeld auswählen und Text eingeben.</p>
+        </div>
+
+        <h3>Von Hand hinzufügen</h3>
+        <div class="ftx-add-term">
+          <input type="text" id="manual-term-input" placeholder="Begriff eingeben...">
+          <button id="add-manual-term" class="ftx-button">Hinzufügen</button>
+        </div>
+
+        <h3>Zuordnungen</h3>
+        <table id="mappings-table" class="ftx-mappings-table">
+          <thead>
+            <tr>
+              <th>Begriff</th>
+              <th>Checkbox</th>
+              <th>Aktion</th>
+            </tr>
+          </thead>
+          <tbody id="mappings-tbody">
+            <!-- Dynamisch -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <script>
-    // Platzhalter für Overlay-JavaScript
-  </script>
+  <!-- Footer -->
+  <div class="ftx-overlay-footer">
+    <button id="save-button" class="ftx-button ftx-primary">
+      Speichern und Schließen
+    </button>
+    <button id="cancel-button" class="ftx-button">
+      Abbrechen
+    </button>
+  </div>
+
+  <script src="overlay.js"></script>
 </body>
 </html>

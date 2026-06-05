@@ -1,168 +1,240 @@
-+// Overlay-JavaScript für FormTexter-Erweiterung
-// Verantwortlich für: UI-Interaktion, DOM-Auswahl, Zuordnungsverwaltung
+// FormTexter Overlay JavaScript (URL-basierte Architektur, 05.06.2026)
+// Läuft IFRAME-isoliert - kommuniziert via window.parent.postMessage
 
-// Zustand des Overlays
 const state = {
-  selectedTextField: null,
-  selectedCheckbox: null,
+  currentUrl: '',
+  urlKey: '',
+  textFieldId: '',
+  checkboxes: [],
+  terms: [],
+  mappings: [], // { term, checkboxId }
   fieldSelectionMode: false,
-  checkboxSelectionMode: false,
-  mappings: [],
-  textFieldId: ''
+  checkboxSelectionMode: false
 };
 
-// DOM-Elemente cachen
 const elements = {
   closeButton: document.getElementById('close-overlay'),
   tabButtons: {
-    setup: document.getElementById('tab-setup'),
-    mappings: document.getElementById('tab-mappings'),
-    settings: document.getElementById('tab-settings')
+    url: document.getElementById('tab-url'),
+    checkboxes: document.getElementById('tab-checkboxes'),
+    mappings: document.getElementById('tab-mappings')
   },
   tabContents: {
-    setup: document.getElementById('tab-content-setup'),
-    mappings: document.getElementById('tab-content-mappings'),
-    settings: document.getElementById('tab-content-settings')
+    url: document.getElementById('tab-content-url'),
+    checkboxes: document.getElementById('tab-content-checkboxes'),
+    mappings: document.getElementById('tab-content-mappings')
   },
-  selectFieldButton: document.getElementById('select-field-button'),
+  currentUrl: document.getElementById('current-url'),
+  configStatusText: document.getElementById('config-status-text'),
+  btnCreateConfig: document.getElementById('btn-create-config'),
+  btnLoadConfig: document.getElementById('btn-load-config'),
+  btnDeleteConfig: document.getElementById('btn-delete-config'),
+  similarConfigs: document.getElementById('similar-configs'),
+  similarList: document.getElementById('similar-list'),
   selectedFieldInfo: document.getElementById('selected-field-info'),
-  fieldIdInput: document.getElementById('field-id-input'),
-  mappingsTableBody: document.getElementById('mappings-table').querySelector('tbody'),
-  addMappingButton: document.getElementById('add-mapping-button'),
-  selectCheckboxButton: document.getElementById('select-checkbox-button'),
-  newTermInput: document.getElementById('new-term-input'),
-  newCheckboxInfo: document.getElementById('new-checkbox-info'),
+  selectFieldButton: document.getElementById('select-field-button'),
+  checkboxesInfo: document.getElementById('checkboxes-info'),
+  checkboxesTable: document.getElementById('checkboxes-table'),
+  checkboxesTbody: document.getElementById('checkboxes-tbody'),
+  refreshCheckboxes: document.getElementById('refresh-checkboxes'),
+  termsContainer: document.getElementById('terms-container'),
+  termsInfo: document.getElementById('terms-info'),
+  manualTermInput: document.getElementById('manual-term-input'),
+  addManualTerm: document.getElementById('add-manual-term'),
+  mappingsTbody: document.getElementById('mappings-tbody'),
   saveButton: document.getElementById('save-button'),
-  cancelButton: document.getElementById('cancel-button'),
-  autoApplyCheckbox: document.getElementById('auto-apply-checkbox')
+  cancelButton: document.getElementById('cancel-button')
 };
 
 /**
- * Initialisiert das Overlay und bindet Event-Listener
+ * Initialisiert das Overlay
  */
 function initOverlay() {
-  // Tabs initialisieren
   setupTabs();
+  setupEventListeners();
 
-  // Event-Listener binden
-  elements.closeButton.addEventListener('click', closeOverlay);
-  elements.selectFieldButton.addEventListener('click', enterFieldSelectionMode);
-  elements.fieldIdInput.addEventListener('change', handleFieldIdInput);
-  elements.selectCheckboxButton.addEventListener('click', enterCheckboxSelectionMode);
-  elements.addMappingButton.addEventListener('click', addMapping);
-  elements.saveButton.addEventListener('click', saveAndClose);
-  elements.cancelButton.addEventListener('click', closeOverlay);
+  // URL vom content_script anfragen
+  window.parent.postMessage({ action: 'formtexter-get-url' }, '*');
 
-  // Lade vorhandene Zuordnungen
-  loadExistingMappings();
-
-  // Event für Overlay-Initialisierung melden
   window.parent.postMessage({ action: 'formtexter-overlay-ready' }, '*');
 }
 
 /**
- * Initialisiert Tab-Wechsel
+ * Setzt Tab-Wechsel
  */
 function setupTabs() {
-  Object.values(elements.tabButtons).forEach(button => {
-    button.addEventListener('click', () => {
-      const tabName = button.dataset.tab;
-
-      // Aktive Tab-Klasse entfernen
-      Object.values(elements.tabButtons).forEach(btn => {
-        btn.classList.remove('active');
-      });
-      button.classList.add('active');
-
-      // Tab-Inhalte umschalten
-      Object.values(elements.tabContents).forEach(content => {
-        content.classList.remove('active');
-      });
+  Object.values(elements.tabButtons).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.dataset.tab;
+      Object.values(elements.tabButtons).forEach(b => b.classList.remove('active'));
+      Object.values(elements.tabContents).forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
       elements.tabContents[tabName].classList.add('active');
     });
   });
 }
 
 /**
- * Aktiviert den Modus zur Auswahl eines Freitextfelds
- * Blendet das Overlay aus, damit der Benutzer auf die Seite klicken kann
+ * Setzt alle Event-Listener
  */
-function enterFieldSelectionMode() {
-  state.fieldSelectionMode = true;
-  elements.selectedFieldInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf das Freitextfeld...';
+function setupEventListeners() {
+  elements.closeButton.addEventListener('click', closeOverlay);
+  elements.selectFieldButton.addEventListener('click', enterFieldSelectionMode);
+  elements.saveButton.addEventListener('click', saveAndClose);
+  elements.cancelButton.addEventListener('click', closeOverlay);
+  elements.btnAddManualTerm.addEventListener('click', addManualTerm);
+  elements.refreshCheckboxes.addEventListener('click', refreshCheckboxes);
 
-  // Overlay temporär ausblenden (das innere Panel)
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = 'none';
-  }
-
-  // Cursor auf crosshair setzen
-  document.body.style.cursor = 'crosshair';
-
-  // Event-Listener temporär hinzufügen
-  document.addEventListener('click', handleFieldSelection, { once: true });
-
-  // Button-Text ändern
-  elements.selectFieldButton.textContent = 'Auswahl abbrechen';
-  elements.selectFieldButton.onclick = cancelFieldSelection;
+  // Message-Listener für IFRAME-Kommunikation
+  window.addEventListener('message', handleMessageFromParent);
 }
 
 /**
- * Behandelt die Auswahl eines Freitextfelds
- * @param {MouseEvent} event
+ * Verarbeitet Messages vom parent (content_script)
  */
-function handleFieldSelection(event) {
-  state.fieldSelectionMode = false;
-  document.body.style.cursor = '';
-  elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen (Cursor ändern)';
-  elements.selectFieldButton.onclick = enterFieldSelectionMode;
+function handleMessageFromParent(event) {
+  if (event.source !== window.parent) return;
+  const data = event.data;
 
-  const target = event.target;
-  state.selectedTextField = target;
+  if (data.action === 'formtexter-url-response') {
+    // URL empfangen
+    state.currentUrl = data.url;
+    state.urlKey = data.urlKey;
+    elements.currentUrl.textContent = data.url;
 
-  // Prüfen, ob das Element ein gültiges Textfeld ist
-  if (!isValidTextField(target)) {
-    // Overlay wieder einblenden
-    const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-    if (overlayPanel) {
-      overlayPanel.style.display = '';
+    // Konfiguration laden
+    loadUrlConfig();
+    findSimilarConfigs();
+  }
+
+  if (data.action === 'formtexter-field-selected') {
+    // Feld wurde vom content_script markiert
+    state.fieldSelectionMode = false;
+    state.textFieldId = data.fieldId;
+    elements.selectedFieldInfo.textContent = `✅ Feld: '${state.textFieldId}'`;
+    elements.selectFieldButton.textContent = '🔍 Feld ändern';
+    elements.selectFieldButton.onclick = enterFieldSelectionMode;
+
+    // Zur Checkboxen-Tabelle wechseln
+    elements.tabButtons.checkboxes.click();
+
+    // Checkboxen scannen
+    window.parent.postMessage({ action: 'formtexter-scan-checkboxes' }, '*');
+  }
+
+  if (data.action === 'formtexter-checkboxes-scanned') {
+    // Checkboxen wurden empfangen
+    state.checkboxes = data.checkboxes || [];
+    renderCheckboxesTable();
+  }
+
+  if (data.action === 'formtexter-config-loaded') {
+    // Konfiguration wurde geladen
+    if (data.config) {
+      state.textFieldId = data.config.textFieldId || '';
+      state.mappings = (data.config.mappings || []).map(m => ({
+        term: m.term,
+        checkboxId: m.checkboxId
+      }));
+
+      if (state.textFieldId) {
+        elements.selectedFieldInfo.textContent = `✅ Feld: '${state.textFieldId}'`;
+        elements.selectFieldButton.textContent = '🔍 Feld ändern';
+      }
+
+      updateConfigStatus(true);
+      renderMappingsTable();
+    } else {
+      updateConfigStatus(false);
     }
-    alert('Bitte wählen Sie ein Freitextfeld (Textarea oder Input) aus.');
-    elements.selectedFieldInfo.textContent = 'Kein Feld ausgewählt';
+  }
+
+  if (data.action === 'formtexter-similar-configs') {
+    // Ähnliche Konfigurationen
+    if (data.configs && data.configs.length > 0) {
+      renderSimilarConfigs(data.configs);
+    }
+  }
+
+  if (data.action === 'formtexter-selection-cancelled') {
+    state.fieldSelectionMode = false;
+    state.checkboxSelectionMode = false;
+    elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen';
+    elements.selectFieldButton.onclick = enterFieldSelectionMode;
+  }
+
+  if (data.action === 'formtexter-checkbox-selected') {
+    state.checkboxSelectionMode = false;
+    // Checkbox wurde ausgewählt - nicht mehr benötigt im neuen Workflow
+  }
+}
+
+/**
+ * Lädt die URL-Konfiguration vom background
+ */
+function loadUrlConfig() {
+  window.parent.postMessage({
+    action: 'formtexter-load-config',
+    url: state.currentUrl,
+    urlKey: state.urlKey
+  }, '*');
+}
+
+/**
+ * Sucht ähnliche Konfigurationen (Smart Defaults)
+ */
+function findSimilarConfigs() {
+  window.parent.postMessage({
+    action: 'formtexter-find-similar',
+    url: state.currentUrl
+  }, '*');
+}
+
+/**
+ * Aktualisiert den Konfigurationsstatus im URL-Tab
+ */
+function updateConfigStatus(hasConfig) {
+  if (hasConfig) {
+    elements.configStatusText.textContent = '✅ Konfiguration gefunden';
+    elements.btnLoadConfig.style.display = 'inline-block';
+    elements.btnDeleteConfig.style.display = 'inline-block';
+    elements.btnCreateConfig.style.display = 'none';
+  } else {
+    elements.configStatusText.textContent = 'Keine Konfiguration gefunden';
+    elements.btnLoadConfig.style.display = 'none';
+    elements.btnDeleteConfig.style.display = 'none';
+    elements.btnCreateConfig.style.display = 'inline-block';
+  }
+}
+
+/**
+ * Rendert die Liste ähnlicher Konfigurationen
+ */
+function renderSimilarConfigs(configs) {
+  if (configs.length === 0) {
+    elements.similarConfigs.style.display = 'none';
     return;
   }
 
-  // ID des Felds verwenden oder generieren
-  state.textFieldId = target.id || `formtexter-field-${Date.now()}`;
-  elements.selectedFieldInfo.textContent = `✅ Feld ausgewählt: ID '${state.textFieldId}', Typ: ${target.tagName}`;
-
-  // Wenn das Feld keine ID hat, diese setzen (falls möglich)
-  if (!target.id) {
-    target.id = state.textFieldId;
-  }
-
-  // Overlay wieder einblenden
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = '';
-  }
-
-  // Loggen
-  logEvent('info', `Freitextfeld ausgewählt: ID '${state.textFieldId}'`);
+  elements.similarList.innerHTML = '';
+  configs.forEach(cfg => {
+    const li = document.createElement('li');
+    li.textContent = `${cfg.urlKey || cfg.key} (${cfg.textFieldId || 'kein Feld'})`;
+    elements.similarConfigs.style.display = 'block';
+  });
 }
 
 /**
- * Prüft, ob ein Element ein gültiges Textfeld ist
- * @param {HTMLElement} element
- * @returns {boolean}
+ * Aktiviert den Modus zur Auswahl eines Freitextfelds
  */
-function isValidTextField(element) {
-  return (element.tagName === 'TEXTAREA' ||
-          (element.tagName === 'INPUT' &&
-           ['text', 'search', 'email', 'tel', 'url', 'password'].includes(element.type))) &&
-         !element.disabled &&
-         !element.readOnly;
+function enterFieldSelectionMode() {
+  state.fieldSelectionMode = true;
+  elements.selectedFieldInfo.textContent = 'Klicken Sie jetzt auf ein Freitextfeld...';
+
+  window.parent.postMessage({ action: 'formtexter-select-field' }, '*');
+
+  elements.selectFieldButton.textContent = 'Abbrechen';
+  elements.selectFieldButton.onclick = cancelFieldSelection;
 }
 
 /**
@@ -170,388 +242,197 @@ function isValidTextField(element) {
  */
 function cancelFieldSelection() {
   state.fieldSelectionMode = false;
-  document.body.style.cursor = '';
-  elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen (Cursor ändern)';
+  elements.selectFieldButton.textContent = '🔍 Freitextfeld auswählen';
   elements.selectFieldButton.onclick = enterFieldSelectionMode;
 
-  // Overlay wieder einblenden
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = '';
-  }
+  window.parent.postMessage({ action: 'formtexter-selection-cancelled' }, '*');
 }
 
 /**
- * Behandelt die manuelle Eingabe der Feld-ID
+ * Rendert die Tabelle der erkannten Checkboxen
  */
-function handleFieldIdInput() {
-  const fieldId = elements.fieldIdInput.value.trim();
-  if (fieldId) {
-    state.textFieldId = fieldId;
-    state.selectedTextField = document.getElementById(fieldId);
-    elements.selectedFieldInfo.textContent = `Feld-ID eingegeben: '${fieldId}'`;
-
-    // Falls das Feld existiert, markieren
-    if (state.selectedTextField) {
-      highlightElement(state.selectedTextField);
-    }
-  }
-}
-
-/**
- * Aktiviert den Modus zur Auswahl einer Checkbox
- * Blendet das Overlay aus, damit der Benutzer auf die Seite klicken kann
- */
-function enterCheckboxSelectionMode() {
-  state.checkboxSelectionMode = true;
-  elements.newCheckboxInfo.textContent = 'Overlay wird ausgeblendet... Klicken Sie dann auf eine Checkbox...';
-
-  // Overlay temporär ausblenden
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = 'none';
-  }
-
-  // Cursor auf crosshair setzen
-  document.body.style.cursor = 'crosshair';
-
-  // Event-Listener temporär hinzufügen
-  document.addEventListener('click', handleCheckboxSelection, { once: true });
-
-  // Button-Text ändern
-  elements.selectCheckboxButton.textContent = 'Auswahl abbrechen';
-  elements.selectCheckboxButton.onclick = cancelCheckboxSelection;
-}
-
-/**
- * Behandelt die Auswahl einer Checkbox
- * @param {MouseEvent} event
- */
-function handleCheckboxSelection(event) {
-  state.checkboxSelectionMode = false;
-  document.body.style.cursor = '';
-  elements.selectCheckboxButton.textContent = 'Checkbox auswählen';
-  elements.selectCheckboxButton.onclick = enterCheckboxSelectionMode;
-
-  const target = event.target;
-  state.selectedCheckbox = target;
-
-  // Overlay wieder einblenden
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = '';
-  }
-
-  // Prüfen, ob das Element eine Checkbox ist
-  if (!isCheckbox(target)) {
-    alert('Bitte wählen Sie eine Checkbox oder ein Radio-Button aus.');
-    elements.newCheckboxInfo.textContent = 'Wähle eine Checkbox';
+function renderCheckboxesTable() {
+  if (state.checkboxes.length === 0) {
+    elements.checkboxesInfo.textContent = 'Keine Checkboxen gefunden.';
+    elements.checkboxesTable.style.display = 'none';
+    elements.refreshCheckboxes.style.display = 'none';
     return;
   }
 
-  // ID der Checkbox verwenden oder generieren
-  const checkboxId = target.id || `formtexter-checkbox-${Date.now()}`;
-  if (!target.id) {
-    target.id = checkboxId;
-  }
+  elements.checkboxesInfo.textContent = `${state.checkboxes.length} Checkboxen erkannt.`;
+  elements.checkboxesTable.style.display = 'table';
+  elements.refreshCheckboxes.style.display = 'inline-block';
 
-  // Checkbox-Info aktualisieren
-  elements.newCheckboxInfo.innerHTML = `
-    <span>Checkbox:</span>
-    <span class="checkbox-label">${checkboxId}</span>
-    <button class="formtexter-button small" onclick="clearSelectedCheckbox()">×</button>
-  `;
+  elements.checkboxesTbody.innerHTML = '';
+  state.checkboxes.forEach((cb, idx) => {
+    const row = document.createElement('tr');
 
-  // Checkbox visuell hervorheben
-  highlightElement(target);
+    // Auswahl
+    const selectCell = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `cb-select-${idx}`;
+    checkbox.checked = state.checkboxes.some(c => c.id === cb.id && c.selected);
+    checkbox.addEventListener('change', () => toggleCheckboxSelection(idx, checkbox.checked));
+    selectCell.appendChild(checkbox);
 
-  // Loggen
-  logEvent('info', `Checkbox ausgewählt: ID '${checkboxId}'`);
-}
+    // ID
+    const idCell = document.createElement('td');
+    idCell.textContent = cb.id || '(keine ID)';
 
-/**
- * Prüft, ob ein Element eine Checkbox ist
- * @param {HTMLElement} element
- * @returns {boolean}
- */
-function isCheckbox(element) {
-  return element.tagName === 'INPUT' &&
-         (element.type === 'checkbox' || element.type === 'radio');
-}
+    // Labels
+    const labelsCell = document.createElement('td');
+    labelsCell.textContent = cb.labels ? cb.labels.join(', ') : '-';
 
-/**
- * Bricht die Checkbox-Auswahl ab
- */
-function cancelCheckboxSelection() {
-  state.checkboxSelectionMode = false;
-  document.body.style.cursor = '';
-  elements.selectCheckboxButton.textContent = 'Checkbox auswählen';
-  elements.selectCheckboxButton.onclick = enterCheckboxSelectionMode;
+    // Nähe
+    const proximityCell = document.createElement('td');
+    proximityCell.textContent = cb.isNearby ? 'Nahe' : 'Weiter';
 
-  // Overlay wieder einblenden
-  const overlayPanel = document.querySelector('#formtexter-overlay .formtexter-overlay-container');
-  if (overlayPanel) {
-    overlayPanel.style.display = '';
-  }
-}
-
-/**
- * Hebt ein Element visuell hervor
- * @param {HTMLElement} element
- */
-function highlightElement(element) {
-  // Vorherige Hervorhebung entfernen
-  document.querySelectorAll('.formtexter-checkbox-highlight').forEach(el => {
-    el.classList.remove('formtexter-checkbox-highlight');
+    row.appendChild(selectCell);
+    row.appendChild(idCell);
+    row.appendChild(labelsCell);
+    row.appendChild(proximityCell);
+    elements.checkboxesTbody.appendChild(row);
   });
-
-  // Neue Hervorhebung hinzufügen
-  element.classList.add('formtexter-checkbox-highlight');
-
-  // Nach 3 Sekunden entfernen
-  setTimeout(() => {
-    element.classList.remove('formtexter-checkbox-highlight');
-  }, 3000);
 }
 
 /**
- * Löscht die ausgewählte Checkbox
+ * Toggelt die Auswahl einer Checkbox
  */
-function clearSelectedCheckbox() {
-  state.selectedCheckbox = null;
-  elements.newCheckboxInfo.innerHTML = 'Wähle eine Checkbox';
+function toggleCheckboxSelection(idx, selected) {
+  state.checkboxes[idx].selected = selected;
 }
 
 /**
- * Fügt eine neue Zuordnung hinzu
+ * Scannt Checkboxen neu
  */
-function addMapping() {
-  const term = elements.newTermInput.value.trim();
-
-  if (!term) {
-    alert('Bitte geben Sie einen Begriff ein.');
-    return;
-  }
-
-  if (!state.selectedCheckbox) {
-    alert('Bitte wählen Sie eine Checkbox aus.');
-    return;
-  }
-
-  const checkboxId = state.selectedCheckbox.id;
-  const newMapping = { term, checkboxId };
-
-  // Prüfen, ob diese Zuordnung bereits existiert
-  const existingMapping = state.mappings.find(m => m.term === term && m.checkboxId === checkboxId);
-  if (existingMapping) {
-    alert('Diese Zuordnung existiert bereits.');
-    return;
-  }
-
-  // Zuordnung zur Liste hinzufügen
-  state.mappings.push(newMapping);
-  updateMappingsTable();
-
-  // Felder zurücksetzen
-  elements.newTermInput.value = '';
-  clearSelectedCheckbox();
-
-  // Loggen
-  logEvent('info', `Zuordnung hinzugefügt: '${term}' → '${checkboxId}'`);
+function refreshCheckboxes() {
+  window.parent.postMessage({ action: 'formtexter-scan-checkboxes' }, '*');
 }
 
 /**
- * Aktualisiert die Zuordnungs-Tabelle
+ * Fügt einen manuellen Begriff hinzu
  */
-function updateMappingsTable() {
-  elements.mappingsTableBody.innerHTML = '';
+function addManualTerm() {
+  const term = elements.manualTermInput.value.trim();
+  if (!term) return;
 
-  state.mappings.forEach(mapping => {
+  if (!state.terms.includes(term)) {
+    state.terms.push(term);
+    renderTerms();
+  }
+  elements.manualTermInput.value = '';
+}
+
+/**
+ * Rendert die extrahierten Begriffe
+ */
+function renderTerms() {
+  if (state.terms.length === 0) {
+    elements.termsInfo.style.display = 'block';
+    elements.termsContainer.innerHTML = '';
+    return;
+  }
+
+  elements.termsInfo.style.display = 'none';
+  elements.termsContainer.innerHTML = '';
+
+  state.terms.forEach((term, idx) => {
+    const tag = document.createElement('span');
+    tag.className = 'ftx-term-tag';
+    tag.textContent = term;
+    tag.draggable = true;
+    tag.dataset.termIdx = idx;
+
+    tag.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', term);
+      tag.classList.add('dragging');
+    });
+
+    tag.addEventListener('dragend', () => {
+      tag.classList.remove('dragging');
+    });
+
+    elements.termsContainer.appendChild(tag);
+  });
+}
+
+/**
+ * Rendert die Zuordnungstabelle
+ */
+function renderMappingsTable() {
+  elements.mappingsTbody.innerHTML = '';
+
+  state.mappings.forEach((mapping, idx) => {
     const row = document.createElement('tr');
 
     // Begriff
     const termCell = document.createElement('td');
     termCell.textContent = mapping.term;
 
-    // Checkbox-ID
+    // Checkbox
     const checkboxCell = document.createElement('td');
-    const checkboxInfo = document.createElement('div');
-    checkboxInfo.className = 'checkbox-info';
-    checkboxInfo.innerHTML = `
-      <span>${mapping.checkboxId}</span>
-      <button class="formtexter-button small" onclick="testCheckbox('${mapping.checkboxId}')">Testen</button>
-    `;
-    checkboxCell.appendChild(checkboxInfo);
+    checkboxCell.textContent = mapping.checkboxId;
 
-    // Aktion (Löschen)
+    // Löschen
     const actionCell = document.createElement('td');
-    const deleteButton = document.createElement('span');
-    deleteButton.textContent = '×';
-    deleteButton.className = 'delete-row';
-    deleteButton.onclick = () => deleteMapping(mapping.term, mapping.checkboxId);
-    actionCell.appendChild(deleteButton);
+    const deleteBtn = document.createElement('span');
+    deleteBtn.className = 'delete-mapping';
+    deleteBtn.textContent = '×';
+    deleteBtn.onclick = () => deleteMapping(idx);
+    actionCell.appendChild(deleteBtn);
 
     row.appendChild(termCell);
     row.appendChild(checkboxCell);
     row.appendChild(actionCell);
-    elements.mappingsTableBody.appendChild(row);
+    elements.mappingsTbody.appendChild(row);
   });
 }
 
 /**
- * Testet eine Checkbox, indem sie kurz aktiviert wird
- * @param {string} checkboxId
- */
-function testCheckbox(checkboxId) {
-  const checkbox = document.getElementById(checkboxId);
-  if (checkbox) {
-    checkbox.checked = true;
-    highlightElement(checkbox);
-
-    // Nach 1 Sekunde zurücksetzen
-    setTimeout(() => {
-      checkbox.checked = false;
-    }, 1000);
-  }
-}
-
-/**
  * Löscht eine Zuordnung
- * @param {string} term
- * @param {string} checkboxId
  */
-function deleteMapping(term, checkboxId) {
-  state.mappings = state.mappings.filter(m => !(m.term === term && m.checkboxId === checkboxId));
-  updateMappingsTable();
-
-  // Loggen
-  logEvent('info', `Zuordnung gelöscht: '${term}' → '${checkboxId}'`);
-}
-
-/**
- * Lädt vorhandene Zuordnungen für die aktuelle Seite
- */
-async function loadExistingMappings() {
-  try {
-    // Message an Hintergrundscript senden
-    const response = await browser.runtime.sendMessage({ action: 'loadMappings' });
-
-    if (response && Object.keys(response).length > 0) {
-      // Ausgewähltes Feld wiederherstellen
-      state.textFieldId = response.textFieldId;
-      state.selectedTextField = document.getElementById(state.textFieldId);
-
-      if (state.selectedTextField) {
-        elements.selectedFieldInfo.textContent = `Feld ausgewählt: ID '${state.textFieldId}', Typ: ${state.selectedTextField.tagName}`;
-      } else {
-        elements.selectedFieldInfo.textContent = `Feld (gespeicherte ID: '${state.textFieldId}') nicht gefunden`;
-      }
-
-      // Zuordnungen wiederherstellen
-      state.mappings = Object.entries(response.mappings || {}).map(([term, checkboxId]) => ({
-        term,
-        checkboxId
-      }));
-      updateMappingsTable();
-
-      // Automatische Anwendung wiederherstellen
-      if (response.autoApply !== undefined) {
-        elements.autoApplyCheckbox.checked = response.autoApply;
-      }
-
-      // Loggen
-      logEvent('info', `Vorhandene Zuordnungen geladen: ${state.mappings.length} Einträge`);
-    }
-  } catch (error) {
-    console.error('Fehler beim Laden der Zuordnungen:', error);
-    logEvent('error', `Zuordnungen konnten nicht geladen werden: ${error.message}`);
-  }
+function deleteMapping(idx) {
+  state.mappings.splice(idx, 1);
+  renderMappingsTable();
 }
 
 /**
  * Speichert die Zuordnungen und schließt das Overlay
  */
-async function saveAndClose() {
-  // Validierung
-  if (state.mappings.length === 0) {
-    if (!confirm('Es wurden keine Zuordnungen erstellt. Möchten Sie trotzdem speichern?')) {
-      return;
-    }
-  }
-
+function saveAndClose() {
   if (!state.textFieldId) {
-    alert('Bitte wählen Sie ein Freitextfeld aus oder geben Sie eine ID ein.');
+    alert('Bitte zuerst ein Freitextfeld auswählen.');
     return;
   }
 
-  // Speicherformat vorbereiten
-  const mappingsObject = {};
-  state.mappings.forEach(mapping => {
-    mappingsObject[mapping.term] = mapping.checkboxId;
-  });
+  if (state.mappings.length === 0) {
+    if (!confirm('Keine Zuordnungen erstellt. Trotzdem speichern?')) return;
+  }
 
   const dataToSave = {
     textFieldId: state.textFieldId,
-    mappings: mappingsObject,
-    autoApply: elements.autoApplyCheckbox.checked
+    mappings: state.mappings,
+    checkboxes: state.checkboxes.map(c => c.id),
+    autoApply: true
   };
 
-  try {
-    // Message an Hintergrundscript senden
-    await browser.runtime.sendMessage({
-      action: 'saveMappings',
-      data: dataToSave
-    });
+  window.parent.postMessage({
+    action: 'formtexter-save-config',
+    url: state.currentUrl,
+    urlKey: state.urlKey,
+    data: dataToSave
+  }, '*');
 
-    // Loggen
-    logEvent('info', `Zuordnungen gespeichert: ${state.mappings.length} Einträge`);
-
-    // Overlay schließen
-    closeOverlay();
-  } catch (error) {
-    console.error('Fehler beim Speichern:', error);
-    logEvent('error', `Zuordnungen konnten nicht gespeichert werden: ${error.message}`);
-    alert('Fehler beim Speichern der Zuordnungen. Bitte versuchen Sie es erneut.');
-  }
+  closeOverlay();
 }
 
 /**
  * Schließt das Overlay
  */
 function closeOverlay() {
-  // Hervorhebungen entfernen
-  document.querySelectorAll('.formtexter-checkbox-highlight').forEach(el => {
-    el.classList.remove('formtexter-checkbox-highlight');
-  });
-
-  // Overlay aus dem DOM entfernen
-  const overlay = document.getElementById('formtexter-overlay');
-  if (overlay) {
-    overlay.remove();
-  }
-
-  // Cursor zurücksetzen
-  document.body.style.cursor = '';
-
-  // Loggen
-  logEvent('info', 'Overlay geschlossen');
+  window.parent.postMessage({ action: 'formtexter-overlay-close' }, '*');
 }
 
-/**
- * Loggt ein Ereignis im Hintergrund
- * @param {string} level - Log-Level
- * @param {string} message - Log-Nachricht
- */
-function logEvent(level, message) {
-  try {
-    browser.runtime.sendMessage({
-      action: 'logEvent',
-      data: { level, message }
-    });
-  } catch (error) {
-    console.error('Logging fehlgeschlagen:', error);
-  }
-}
-
-// Initialisierung starten
-window.addEventListener('formtexter-overlay-loaded', initOverlay);
+// Initialisierung
+window.addEventListener('DOMContentLoaded', initOverlay);
