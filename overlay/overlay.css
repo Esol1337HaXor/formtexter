@@ -289,6 +289,27 @@ body {
   color: #a71d2a;
 }
 
+/* Mapping Rows - Drag-and-Drop Ziel */
+.ftx-mapping-row {
+  cursor: default;
+  transition: background-color 0.2s;
+}
+
+.ftx-mapping-row:hover {
+  background-color: #f0f7ff;
+}
+
+.ftx-mapping-row.drag-over {
+  background-color: #d0e8ff;
+  border-left: 3px solid #007bff;
+}
+
+/* Terms Container - Drop Zone Highlight */
+.ftx-terms-container.drop-active {
+  border-color: #007bff;
+  background-color: #f0f7ff;
+}
+
 /* Footer */
 .ftx-overlay-footer {
   padding: 16px 20px;

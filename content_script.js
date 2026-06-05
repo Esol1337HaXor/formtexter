@@ -7,24 +7,19 @@ let state = {
   fieldSelectionMode: false,
   checkboxSelectionMode: false,
   currentUrl: '',
-  currentUrlKey: ''
+  currentUrlKey: '',
+  textFieldElement: null,
+  mutationObserver: null
 };
 
-/**
- * Startet das Content Script auf der aktuellen Seite
- */
 function init() {
   setupMessageListener();
   setupPageClickListener();
-
-  // URL speichern
   state.currentUrl = window.location.href;
   state.currentUrlKey = getSiteKey(state.currentUrl);
+  startCheckboxObserver();
 }
 
-/**
- * Generiert einen Schlüssel für die Website-basierte Speicherung
- */
 function getSiteKey(url) {
   try {
     const urlObj = new URL(url);
@@ -34,9 +29,6 @@ function getSiteKey(url) {
   }
 }
 
-/**
- * Richtet Message-Listener für IFRAME-Kommunikation ein
- */
 function setupMessageListener() {
   if (browser && browser.runtime) {
     browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -51,35 +43,22 @@ function setupMessageListener() {
       return true;
     });
 
-    // Zuordnungen laden
     browser.runtime.sendMessage({ action: 'loadMappings' }, (mappings) => {
-      if (mappings) {
-        applyMappingsFromTextField(mappings);
-      }
+      if (mappings) applyMappingsFromTextField(mappings);
     });
   }
 }
 
-/**
- * Richtet Click-Listener auf der Seite ein
- */
 function setupPageClickListener() {
   document.addEventListener('click', handlePageClick, true);
 }
 
-/**
- * Verarbeitet Clicks auf der Seite (während Feld-/Checkbox-Auswahl aktiv ist)
- */
 function handlePageClick(event) {
   if (!state.fieldSelectionMode) return;
-
   const target = event.target;
   if (isValidTextField(target)) {
     const fieldId = target.id || `formtexter-field-${Date.now()}`;
-    if (!target.id) {
-      target.id = fieldId;
-    }
-
+    if (!target.id) target.id = fieldId;
     if (currentIframe) {
       currentIframe.contentWindow.postMessage({
         action: 'formtexter-field-selected',
@@ -87,88 +66,48 @@ function handlePageClick(event) {
         element: { tagName: target.tagName, id: fieldId }
       }, '*');
     }
-
     state.fieldSelectionMode = false;
     document.body.style.cursor = '';
+    state.textFieldElement = target;
   }
 }
 
-/**
- * Prüft, ob ein Element ein gültiges Textfeld ist
- */
 function isValidTextField(element) {
   return (element.tagName === 'TEXTAREA' ||
           (element.tagName === 'INPUT' &&
            ['text', 'search', 'email', 'tel', 'url', 'password'].includes(element.type))) &&
-         !element.disabled &&
-         !element.readOnly;
+         !element.disabled && !element.readOnly;
 }
 
-/**
- * Prüft, ob ein Element eine Checkbox ist
- */
-function isCheckbox(element) {
-  return element.tagName === 'INPUT' &&
-         (element.type === 'checkbox' || element.type === 'radio');
-}
-
-/**
- * Öffnet das Overlay als IFRAME
- */
 function openOverlay() {
-  // Prüfen, ob Overlay bereits existiert
   const existingOverlay = document.getElementById('formtexter-overlay');
-  if (existingOverlay) {
-    existingOverlay.remove();
-  }
+  if (existingOverlay) existingOverlay.remove();
 
-  // IFRAME erstellen
   const iframe = document.createElement('iframe');
   iframe.id = 'formtexter-overlay';
-
-  // IFRAME stylen
   Object.assign(iframe.style, {
-    position: 'fixed',
-    top: '0',
-    right: '0',
-    width: '350px',
-    height: '100vh',
-    border: 'none',
-    margin: '0',
-    padding: '0',
-    zIndex: '214748364',
-    boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
-    display: 'block',
-    pointerEvents: 'auto'
+    position: 'fixed', top: '0', right: '0',
+    width: '350px', height: '100vh',
+    border: 'none', margin: '0', padding: '0',
+    zIndex: '214748364', boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
+    display: 'block', pointerEvents: 'auto'
   });
-
-  // IFRAME-Quelle setzen (mit Cache-Buster)
   const overlayUrl = browser.runtime.getURL('overlay/overlay.html') + '?v=' + Date.now();
   iframe.src = overlayUrl;
-
-  // IFRAME einfügen
   document.body.appendChild(iframe);
   currentIframe = iframe;
-
-  // Message-Listener für IFRAME-Kommunikation
   setupIframeMessageListener(iframe);
-
   logEvent('info', `Overlay als IFRAME geöffnet: ${overlayUrl}`);
 }
 
-/**
- * Richtet Message-Listener für IFRAME-Kommunikation ein
- */
 function setupIframeMessageListener(iframe) {
   window.addEventListener('message', (event) => {
     if (event.source !== iframe.contentWindow) return;
-
     const data = event.data;
 
     switch (data.action) {
       case 'formtexter-overlay-ready':
         logEvent('info', 'Overlay IFRAME ist bereit');
-        // URL an IFRAME senden
         iframe.contentWindow.postMessage({
           action: 'formtexter-url-response',
           url: state.currentUrl,
@@ -196,7 +135,6 @@ function setupIframeMessageListener(iframe) {
         break;
 
       case 'formtexter-scan-checkboxes':
-        // Checkboxen scannen und an IFRAME senden
         const checkboxes = harvestCheckboxModels();
         iframe.contentWindow.postMessage({
           action: 'formtexter-checkboxes-scanned',
@@ -205,7 +143,6 @@ function setupIframeMessageListener(iframe) {
         break;
 
       case 'formtexter-load-config':
-        // Konfiguration vom Background laden
         if (browser && browser.runtime) {
           browser.runtime.sendMessage({ action: 'loadMappings', url: data.url }, (config) => {
             iframe.contentWindow.postMessage({
@@ -217,7 +154,6 @@ function setupIframeMessageListener(iframe) {
         break;
 
       case 'formtexter-find-similar':
-        // Ähnliche Konfigurationen finden
         if (browser && browser.runtime) {
           browser.runtime.sendMessage({ action: 'findSimilarConfigs', url: data.url }, (response) => {
             iframe.contentWindow.postMessage({
@@ -229,7 +165,6 @@ function setupIframeMessageListener(iframe) {
         break;
 
       case 'formtexter-save-config':
-        // Konfiguration speichern
         if (browser && browser.runtime) {
           browser.runtime.sendMessage({
             action: 'saveMappings',
@@ -241,27 +176,30 @@ function setupIframeMessageListener(iframe) {
         }
         break;
 
+      case 'formtexter-get-textfield-value':
+        // Textfeld-Wert an IFRAME senden
+        const textField = document.getElementById(data.textFieldId) || document.querySelector(`[id="${data.textFieldId}"]`);
+        if (textField) {
+          iframe.contentWindow.postMessage({
+            action: 'formtexter-textfield-value',
+            value: textField.value || ''
+          }, '*');
+        }
+        break;
+
       case 'formtexter-log':
-        // Logging an Background weiterleiten
         if (browser && browser.runtime) {
-          browser.runtime.sendMessage({
-            action: 'logEvent',
-            data: data.data
-          });
+          browser.runtime.sendMessage({ action: 'logEvent', data: data.data });
         }
         break;
     }
   });
 }
 
-/**
- * Scannt alle Checkboxen auf der Seite
- */
 function harvestCheckboxModels() {
-  const textField = state.textFieldElement;
   let fieldRect = null;
-  if (textField) {
-    fieldRect = textField.getBoundingClientRect();
+  if (state.textFieldElement) {
+    fieldRect = state.textFieldElement.getBoundingClientRect();
   }
 
   return Array.from(document.querySelectorAll('[type="checkbox"], [type="radio"]'))
@@ -270,7 +208,6 @@ function harvestCheckboxModels() {
       const cbRect = cb.getBoundingClientRect();
       let isNearby = false;
       let labels = [];
-
       if (fieldRect) {
         const dist = pointDistance(
           fieldRect.left + fieldRect.width/2, fieldRect.top + fieldRect.height/2,
@@ -278,11 +215,8 @@ function harvestCheckboxModels() {
         );
         isNearby = dist < 400;
       }
-
-      // Labels finden
       const label = document.querySelector(`label[for="${cb.id}"]`);
       if (label) labels = [label.textContent.trim()];
-
       return {
         id: cb.id || '(keine ID)',
         labels: labels,
@@ -293,27 +227,49 @@ function harvestCheckboxModels() {
     });
 }
 
-/**
- * Hilfspunktdistanz
- */
 function pointDistance(x1, y1, x2, y2) {
   return Math.sqrt((x2-x1)**2 + (y2-y1)**2);
 }
 
 /**
- * Wendet gespeicherte Zuordnungen auf Textfeld-Inhalte an
+ * MutationObserver für dynamische Checkboxen
  */
+function startCheckboxObserver() {
+  if (state.mutationObserver) state.mutationObserver.disconnect();
+
+  state.mutationObserver = new MutationObserver((mutations) => {
+    let changed = false;
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== 1) return; // Nur Elemente
+        if (node.matches && node.matches('[type="checkbox"]')) {
+          changed = true;
+        }
+        if (node.querySelectorAll) {
+          const checkboxes = node.querySelectorAll('[type="checkbox"]');
+          if (checkboxes.length > 0) changed = true;
+        }
+      });
+    });
+
+    // Wenn neue Checkboxen und Overlay offen → neu scannen
+    if (changed && currentIframe) {
+      // Nicht automatisch scannen, aber bereit halten
+      logEvent('info', 'Neue Checkboxen entdeckt - "Neu scannen" verfügbar');
+    }
+  });
+
+  state.mutationObserver.observe(document.body, { childList: true, subtree: true });
+}
+
 function applyMappingsFromTextField(mappings) {
   if (!mappings || !mappings.textFieldId) return;
-
   const textField = document.getElementById(mappings.textFieldId);
   if (!textField) return;
-
   const existingText = textField.value;
   if (existingText.trim()) {
     applyCheckboxMappings(existingText, mappings.mappings);
   }
-
   textField.addEventListener('input', (event) => {
     if (checkboxDebounceTimer) clearTimeout(checkboxDebounceTimer);
     checkboxDebounceTimer = setTimeout(() => {
@@ -324,36 +280,22 @@ function applyMappingsFromTextField(mappings) {
 
 let checkboxDebounceTimer = null;
 
-/**
- * Aktiviert/Deaktiviert Checkboxen basierend auf Freitext
- */
 function applyCheckboxMappings(text, mappings) {
   if (!mappings || Object.keys(mappings).length === 0) return;
-
   const terms = text.split(',').map(term => term.trim());
-
   for (const [term, checkboxId] of Object.entries(mappings)) {
     const shouldCheck = terms.includes(term);
     const checkbox = document.getElementById(checkboxId);
-    if (checkbox) {
-      checkbox.checked = shouldCheck;
-    }
+    if (checkbox) checkbox.checked = shouldCheck;
   }
 }
 
-/**
- * Loggt ein Ereignis an den Hintergrund
- */
 function logEvent(level, message) {
   if (browser && browser.runtime) {
-    browser.runtime.sendMessage({
-      action: 'logEvent',
-      data: { level, message }
-    });
+    browser.runtime.sendMessage({ action: 'logEvent', data: { level, message } });
   }
 }
 
-// Initialisierung starten
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
