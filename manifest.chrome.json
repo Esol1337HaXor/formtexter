@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "FormTexter",
+  "version": "1.1.0",
+  "description": "Automatische Zuordnung von kommagetrennten Freitexten zu Checkboxen in Formularen.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "FormTexter Overlay öffnen",
+    "default_icon": {
+      "48": "icons/icon48.png",
+      "96": "icons/icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["overlay/overlay.html", "overlay/overlay.css", "overlay/overlay.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "48": "icons/icon48.png",
+    "96": "icons/icon48.png"
+  }
+}

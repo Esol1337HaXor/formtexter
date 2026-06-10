@@ -3,151 +3,956 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FormTexter Konfiguration</title>
-  <link rel="stylesheet" href="chrome-extension://__MSG_@@extension_id__/overlay/overlay.css">
+  <title>FormTexter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: #ffffff !important;
+    }
+
+    .ftx-overlay-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%) !important;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 999999 !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .ftx-header-content h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .ftx-url-display-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      background: rgba(255,255,255,0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ftx-config-status-indicator {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-family: sans-serif;
+    }
+
+    .ftx-config-status-indicator.active {
+      background: #4caf50;
+      color: white;
+    }
+
+    .ftx-config-status-indicator.inactive {
+      background: #ff9800;
+      color: white;
+    }
+
+    .ftx-icon-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ftx-icon-button:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .ftx-progress-bar {
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      z-index: 999998 !important;
+      border-bottom: 1px solid #dee2e6;
+      padding: 0 20px;
+    }
+
+    .ftx-progress-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ftx-progress-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #dee2e6;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .ftx-progress-step.active .ftx-progress-circle {
+      background: #007bff;
+      color: white;
+    }
+
+    .ftx-progress-step.completed .ftx-progress-circle {
+      background: #28a745;
+      color: white;
+    }
+
+    .ftx-progress-label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .ftx-progress-step.active .ftx-progress-label {
+      color: #007bff;
+    }
+
+    .ftx-progress-step.completed .ftx-progress-label {
+      color: #28a745;
+    }
+
+    .ftx-progress-step-line {
+      width: 40px;
+      height: 2px;
+      background: #dee2e6;
+      margin: 0 8px;
+    }
+
+    .ftx-overlay-tabs {
+      position: fixed;
+      top: 120px;
+      left: 0;
+      right: 0;
+      display: flex;
+      background: #fff;
+      border-bottom: 2px solid #e9ecef;
+      z-index: 999997 !important;
+      padding: 0 10px;
+    }
+
+    .ftx-tab-button {
+      flex: 1;
+      padding: 12px 8px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .ftx-tab-button:hover {
+      background: #f8f9fa;
+      color: #333;
+    }
+
+    .ftx-tab-button.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+      background: #f0f7ff;
+    }
+
+    .ftx-tab-icon {
+      font-size: 16px;
+    }
+
+    .ftx-overlay-content {
+      position: fixed;
+      top: 165px;
+      bottom: 55px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      padding: 20px;
+      background: #ffffff !important;
+      transition: width 0.3s ease;
+    }
+
+    .ftx-overlay-content.wide-mode {
+      right: 50%;
+    }
+
+    .ftx-tab-content {
+      display: none;
+    }
+
+    .ftx-tab-content.active {
+      display: block;
+    }
+
+    .ftx-instructions {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 15px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+
+    .ftx-instructions h2 {
+      font-size: 15px;
+      margin-bottom: 8px;
+      color: #1565c0;
+    }
+
+    .ftx-instructions p {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .ftx-url-display {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #dee2e6;
+    }
+
+    .ftx-url-display label {
+      font-weight: 600;
+      font-size: 12px;
+      display: block;
+      margin-bottom: 6px;
+      color: #555;
+    }
+
+    .ftx-url-display code {
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+      word-break: break-all;
+      display: block;
+      color: #333;
+    }
+
+    .ftx-config-status {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #dee2e6;
+    }
+
+    .ftx-config-status.no-config {
+      background: #fff3e0;
+      border-color: #ff9800;
+    }
+
+    .ftx-config-status.has-config {
+      background: #e8f5e9;
+      border-color: #4caf50;
+    }
+
+    .ftx-action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .ftx-button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ftx-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .ftx-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .ftx-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .ftx-primary:hover {
+      background: #0056b3;
+    }
+
+    .ftx-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .ftx-success:hover {
+      background: #1e7e34;
+    }
+
+    .ftx-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .ftx-danger:hover {
+      background: #c82333;
+    }
+
+    .ftx-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .ftx-secondary:hover {
+      background: #5a6268;
+    }
+
+    .ftx-selected-field {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 2px dashed #dee2e6;
+      background: #f8f9fa;
+    }
+
+    .ftx-selected-field.has-selection {
+      border-color: #4caf50;
+      background: #e8f5e9;
+      border-style: solid;
+    }
+
+    .ftx-selected-field.ftx-no-selection,
+    .ftx-selected-field:not(.has-selection) {
+      border-color: #ff9800;
+      background: #fff3e0;
+    }
+
+    .cb-selected {
+      background: #e8f5e9 !important;
+    }
+
+    .cb-id-text {
+      font-family: monospace;
+      font-size: 11px;
+      color: #555;
+    }
+
+    .cb-label-text {
+      font-size: 12px;
+    }
+
+    .cb-proximity-near {
+      color: #4caf50;
+      font-weight: 600;
+    }
+
+    .cb-proximity-far {
+      color: #999;
+    }
+
+    .delete-mapping {
+      cursor: pointer;
+      font-size: 20px;
+      color: #dc3545;
+      font-weight: bold;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .delete-mapping:hover {
+      background: #fce4e4;
+    }
+
+    .ftx-terms-container.drop-active {
+      background: #e3f2fd !important;
+      border-color: #2196f3 !important;
+    }
+
+    .ftx-term-tag.dragging {
+      opacity: 0.5;
+    }
+
+    .ftx-checkboxes-section h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .ftx-checkboxes-section p {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .ftx-checkboxes-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .ftx-checkboxes-table th {
+      background: #f8f9fa;
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .ftx-checkboxes-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .ftx-checkboxes-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .ftx-mappings-section h3 {
+      font-size: 14px;
+      margin: 15px 0 8px 0;
+      color: #333;
+    }
+
+    .ftx-terms-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      background: #f0f7ff;
+      border: 2px dashed #007bff;
+      border-radius: 8px;
+      min-height: 50px;
+      margin-bottom: 15px;
+    }
+
+    .ftx-term-tag {
+      padding: 6px 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .ftx-term-tag:hover {
+      transform: scale(1.05);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    .ftx-term-tag:active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+
+    .ftx-add-term {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .ftx-add-term input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .ftx-add-term input:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+
+    .ftx-mappings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .ftx-mappings-table th {
+      background: #f8f9fa;
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .ftx-mappings-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e9ecef;
+      vertical-align: middle;
+    }
+
+    .ftx-mapping-row {
+      transition: background 0.2s;
+    }
+
+    .ftx-mapping-row:hover {
+      background: #f0f7ff;
+    }
+
+    .ftx-empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #999;
+    }
+
+    .ftx-empty-icon {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .ftx-overlay-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 55px;
+      background: #f8f9fa;
+      border-top: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 999999 !important;
+    }
+
+    .ftx-footer-status {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .ftx-footer-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ftx-similar-configs {
+      background: #e8f5e9;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #4caf50;
+    }
+
+    .ftx-similar-configs summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #2e7d32;
+    }
+
+    .ftx-similar-configs ul {
+      margin-top: 8px;
+      padding-left: 20px;
+      font-size: 12px;
+    }
+
+    .ftx-similar-configs li {
+      margin-bottom: 4px;
+    }
+
+    .ftx-overlay-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .ftx-overlay-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .ftx-overlay-content::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    .ftx-overlay-content::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    .ftx-dynamic-terms-section {
+      margin-bottom: 10px;
+    }
+
+    .ftx-dynamic-terms-section h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ftx-terms-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      min-height: 40px;
+    }
+
+    .ftx-terms-assigned {
+      background: #e8f5e9;
+      border: 1px dashed #4caf50;
+    }
+
+    .ftx-terms-unassigned {
+      background: #f5f5f5;
+      border: 1px dashed #ccc;
+    }
+
+    .ftx-term-assigned {
+      padding: 6px 12px;
+      background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
+      color: white;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: default;
+      user-select: none;
+      box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+      position: relative;
+    }
+
+    .ftx-term-assigned::before {
+      content: '✓ ';
+      font-weight: bold;
+    }
+
+    .ftx-term-unassigned {
+      padding: 6px 12px;
+      background: #e0e0e0;
+      color: #666;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .ftx-term-unassigned:hover {
+      background: #d0d0d0;
+      transform: scale(1.05);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .ftx-term-unassigned:active {
+      cursor: grabbing;
+    }
+
+    .ftx-term-unassigned.dragging {
+      opacity: 0.5;
+    }
+  </style>
 </head>
 <body>
-  <!-- Header -->
   <div class="ftx-overlay-header">
-    <h1>FormTexter Konfiguration</h1>
-    <button id="close-overlay" class="ftx-button ftx-icon-button" aria-label="Schließen">&times;</button>
+    <div class="ftx-header-content">
+      <h1>📝 FormTexter</h1>
+      <div class="ftx-url-display-header">
+        <span class="ftx-url-icon">🌐</span>
+        <span id="current-url" class="ftx-url-text">Lade URL...</span>
+        <span id="header-config-status" class="ftx-config-status-indicator inactive">
+          ⏳ Kein Status
+        </span>
+      </div>
+    </div>
+    <button id="close-overlay" class="ftx-icon-button" aria-label="Schließen">&times;</button>
   </div>
 
-  <!-- Tabs -->
+  <div class="ftx-progress-bar">
+    <div class="ftx-progress-step active" id="progress-step-1">
+      <div class="ftx-progress-circle">1</div>
+      <span class="ftx-progress-label">URL</span>
+      <div class="ftx-progress-step-line"></div>
+    </div>
+    <div class="ftx-progress-step" id="progress-step-2">
+      <div class="ftx-progress-circle">2</div>
+      <span class="ftx-progress-label">Feld</span>
+      <div class="ftx-progress-step-line"></div>
+    </div>
+    <div class="ftx-progress-step" id="progress-step-3">
+      <div class="ftx-progress-circle">3</div>
+      <span class="ftx-progress-label">Boxen</span>
+      <div class="ftx-progress-step-line"></div>
+    </div>
+    <div class="ftx-progress-step" id="progress-step-4">
+      <div class="ftx-progress-circle">4</div>
+      <span class="ftx-progress-label">Zuordnen</span>
+    </div>
+  </div>
+
   <div class="ftx-overlay-tabs">
-    <button id="tab-url" class="ftx-tab-button active" data-tab="url">URL-Erkennung</button>
-    <button id="tab-checkboxes" class="ftx-tab-button" data-tab="checkboxes">Checkboxen</button>
-    <button id="tab-mappings" class="ftx-tab-button" data-tab="mappings">Zuordnungen</button>
+    <button id="tab-url" class="ftx-tab-button active" data-tab="url">
+      <span class="ftx-tab-icon">🌐</span> URL
+    </button>
+    <button id="tab-checkboxes" class="ftx-tab-button" data-tab="checkboxes">
+      <span class="ftx-tab-icon">☑️</span> Boxen
+    </button>
+    <button id="tab-mappings" class="ftx-tab-button" data-tab="mappings">
+      <span class="ftx-tab-icon">🏷️</span> Zuordnen
+    </button>
   </div>
 
-  <!-- Tab Content -->
   <div class="ftx-overlay-content">
-
-    <!-- Tab: URL-Erkennung -->
     <div id="tab-content-url" class="ftx-tab-content active">
       <div class="ftx-instructions">
-        <h2>URL-Erkennung</h2>
-        <p>Die Konfiguration wird automatisch für diese URL gespeichert.</p>
+        <h2>📌 So funktioniert FormTexter</h2>
+        <p>
+          <strong>1.</strong> Hier wird automatisch die aktuelle Website erkannt<br>
+          <strong>2.</strong> Wähle ein Freitextfeld auf der Seite<br>
+          <strong>3.</strong> Wähle Checkboxen aus und ordne Begriffe zu<br>
+          <strong>4.</strong> Speichern — bei Texteingabe werden Checkboxen automatisch gesetzt!
+        </p>
       </div>
 
       <div class="ftx-url-display">
-        <label>Aktuelle URL:</label>
-        <code id="current-url">Lade...</code>
+        <label>🌐 Aktuelle Website:</label>
+        <code id="current-url-display">Lade...</code>
       </div>
 
-      <div id="config-status" class="ftx-config-status">
-        <p id="config-status-text">Keine Konfiguration gefunden</p>
-        <button id="btn-create-config" class="ftx-button ftx-primary" style="display:none;">
-          Neue Konfiguration erstellen
-        </button>
-        <button id="btn-load-config" class="ftx-button" style="display:none;">
-          Konfiguration laden
-        </button>
-        <button id="btn-delete-config" class="ftx-button ftx-danger" style="display:none;">
-          🗑 Konfiguration löschen
-        </button>
+      <div id="config-status" class="ftx-config-status no-config">
+        <p id="config-status-text">⏳ Konfiguration wird geprüft...</p>
+        <div class="ftx-action-buttons">
+          <button id="btn-create-config" class="ftx-button ftx-primary" style="display:none;">
+            ➕ Neue Konfiguration
+          </button>
+          <button id="btn-load-config" class="ftx-button ftx-success" style="display:none;">
+            📂 Laden
+          </button>
+          <button id="btn-delete-config" class="ftx-button ftx-danger" style="display:none;">
+            🗑️ Löschen
+          </button>
+        </div>
       </div>
 
       <div id="similar-configs" class="ftx-similar-configs" style="display:none;">
         <details>
-          <summary>Ähnliche Konfigurationen (Smart Defaults)</summary>
+          <summary>💡 Ähnliche Konfigurationen gefunden</summary>
           <ul id="similar-list"></ul>
         </details>
       </div>
     </div>
 
-    <!-- Tab: Checkboxen -->
     <div id="tab-content-checkboxes" class="ftx-tab-content">
       <div class="ftx-instructions">
-        <h2>Freitextfeld auswählen</h2>
+        <h2>☑️ Freitextfeld + Checkboxen</h2>
         <p>
-          Klicken Sie auf den Button, dann auf das Freitextfeld in Ihrem Formular.<br>
-          Alle Checkboxen auf der Seite werden automatisch erkannt.
+          <strong style="color: #007bff;">1.</strong> Freitextfeld auf der Seite auswählen<br>
+          <strong style="color: #007bff;">2.</strong> Alle Checkboxen auf der Seite werden aufgelistet<br>
+          <strong style="color: #28a745;">3.</strong> Markiere die Checkboxen die SETZT werden sollen
         </p>
       </div>
 
-      <div class="ftx-selected-field">
-        <p id="selected-field-info">Kein Feld ausgewählt</p>
-      </div>
+      <div style="background: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 15px;">
+        <h3 style="color: #1565c0; margin-bottom: 10px;">
+          <span style="background: #007bff; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 8px;">1</span>
+          Freitextfeld auswählen
+        </h3>
+        
+        <div id="selected-field-box" class="ftx-selected-field ftx-no-selection">
+          <p id="selected-field-info">⚠️ Noch kein Feld ausgewählt</p>
+        </div>
 
-      <div class="ftx-action-buttons">
-        <button id="select-field-button" class="ftx-button ftx-primary">
-          🔍 Freitextfeld auswählen
+        <button id="select-field-button" class="ftx-button ftx-primary" style="width: 100%;">
+          🔍 Schritt 1: Freitextfeld auf der Seite anklicken
         </button>
       </div>
 
-      <div class="ftx-checkboxes-section">
-        <h3>Erkannte Checkboxen</h3>
-        <p id="checkboxes-info">Wählen Sie zuerst ein Freitextfeld.</p>
+      <div id="checkboxes-step-section" style="opacity: 0.4; pointer-events: none; transition: opacity 0.3s;">
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; border: 2px solid #4caf50; margin-bottom: 15px;">
+          <h3 style="color: #2e7d32; margin-bottom: 10px;">
+            <span style="background: #4caf50; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 8px;">2</span>
+            Checkboxen auswählen
+          </h3>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <p id="checkboxes-info" style="font-size: 12px; color: #666; margin: 0;">
+              ⚠️ Zuerst ein Freitextfeld auswählen.
+            </p>
+            <button id="refresh-checkboxes" class="ftx-button" style="display:none; font-size: 11px;">
+              🔄 Neu scannen
+            </button>
+          </div>
 
-        <table id="checkboxes-table" class="ftx-checkboxes-table" style="display:none;">
-          <thead>
-            <tr>
-              <th>Auswählen</th>
-              <th>Checkbox-ID</th>
-              <th>Labels</th>
-              <th>Nähe zum Feld</th>
-            </tr>
-          </thead>
-          <tbody id="checkboxes-tbody">
-            <!-- Dynamisch -->
-          </tbody>
-        </table>
+          <div style="background: #fff3e0; padding: 12px; border-radius: 8px; border: 1px solid #ff9800; margin-bottom: 10px;">
+            <p style="font-size: 12px; color: #e65100; margin: 0 0 8px 0;">
+              <strong>💡 Tipp:</strong> Sie können unten alle Checkboxen sehen. 
+              Setzen Sie Haken bei denen, die automatisch aktiviert werden sollen.
+            </p>
+          </div>
 
-        <button id="refresh-checkboxes" class="ftx-button" style="display:none;">
-          🔄 Checkboxen neu scannen
-        </button>
+          <div id="checkboxes-table-wrapper" style="max-height: 300px; overflow-y: auto;">
+            <table id="checkboxes-table" class="ftx-checkboxes-table" style="display:none;">
+              <thead>
+                <tr style="position: sticky; top: 0; background: white;">
+                  <th style="width: 40px;">✓</th>
+                  <th>Checkbox</th>
+                  <th>Labels / Text</th>
+                </tr>
+              </thead>
+              <tbody id="checkboxes-tbody">
+              </tbody>
+            </table>
+
+            <div id="checkboxes-empty" class="ftx-empty-state" style="display:none;">
+              <span class="ftx-empty-icon">📭</span>
+              <p>Keine Checkboxen auf dieser Seite gefunden.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Tab: Zuordnungen -->
     <div id="tab-content-mappings" class="ftx-tab-content">
       <div class="ftx-instructions">
-        <h2>Begriffe zuordnen</h2>
+        <h2>🏷️ Begriffe zuordnen</h2>
         <p>
-          Begriffe werden automatisch aus dem Freitextfeld extrahiert.<br>
-          Ordnen Sie sie den Checkboxen zu.
+          <strong style="color: #28a745;">✅ Begriffe grün = bereits einer Checkbox zugeordnet</strong><br>
+          <strong style="color: #666;">⚪ Begriffe grau = noch nicht zugewiesen</strong><br>
+          <strong style="color: #007bff;">⚡ "Sofort anwenden" setzt alle Checkboxen für Begriffe IM Text</strong>
         </p>
       </div>
 
-      <div class="ftx-mappings-section">
-        <h3>Extrahierte Begriffe</h3>
-        <div id="terms-container" class="ftx-terms-container">
-          <p id="terms-info">Keine Begriffe verfügbar. Zuerst Freitextfeld auswählen und Text eingeben.</p>
+      <div class="ftx-dynamic-terms-section">
+        <h3>
+          <span style="color: #28a745;">📝</span> Begriffe im Textfeld
+          <span id="terms-in-text-count" style="font-size: 11px; color: #999; font-weight: normal;">(0)</span>
+        </h3>
+        <p id="terms-in-text-info" style="font-size: 11px; color: #999; margin-bottom: 10px;">
+          ⚠️ Zuerst ein Freitextfeld auswählen.
+        </p>
+        
+        <div id="terms-assigned-group" style="display:none; margin-bottom: 15px;">
+          <div style="font-size: 11px; font-weight: 600; color: #28a745; margin-bottom: 8px;">
+            ✅ Zugewiesen (Checkbox wird gesetzt):
+          </div>
+          <div id="terms-assigned-list" class="ftx-terms-list ftx-terms-assigned">
+          </div>
         </div>
-
-        <h3>Von Hand hinzufügen</h3>
-        <div class="ftx-add-term">
-          <input type="text" id="manual-term-input" placeholder="Begriff eingeben...">
-          <button id="add-manual-term" class="ftx-button">Hinzufügen</button>
+        
+        <div id="terms-unassigned-group" style="display:none; margin-bottom: 15px;">
+          <div style="font-size: 11px; font-weight: 600; color: #666; margin-bottom: 8px;">
+            ⚪ Nicht zugewiesen:
+          </div>
+          <div id="terms-unassigned-list" class="ftx-terms-list ftx-terms-unassigned">
+          </div>
         </div>
+        
+        <div id="terms-empty-msg" class="ftx-empty-state">
+          <span class="ftx-empty-icon">📝</span>
+          <p>Keine Begriffe im Text gefunden.</p>
+        </div>
+      </div>
 
-        <h3>Zuordnungen</h3>
-        <table id="mappings-table" class="ftx-mappings-table">
+      <div class="ftx-mappings-section" style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 15px;">
+        <h3>Aktive Zuordnungen</h3>
+        <p id="mappings-info">Noch keine Zuordnungen vorhanden.</p>
+        <table id="mappings-table" class="ftx-mappings-table" style="display:none;">
           <thead>
             <tr>
               <th>Begriff</th>
               <th>Checkbox</th>
-              <th>Aktion</th>
+              <th style="width: 50px;">Aktion</th>
             </tr>
           </thead>
           <tbody id="mappings-tbody">
-            <!-- Dynamisch -->
           </tbody>
         </table>
+
+        <div id="mappings-empty" class="ftx-empty-state" style="display:none;">
+          <span class="ftx-empty-icon">🏷️</span>
+          <p>Noch keine Begriffe zugewiesen.<br>
+            <strong>Begriffe werden automatisch erkannt wenn sie im Textfeld stehen.</strong></p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
   <div class="ftx-overlay-footer">
-    <button id="save-button" class="ftx-button ftx-primary">
-      Speichern und Schließen
-    </button>
-    <button id="cancel-button" class="ftx-button">
-      Abbrechen
-    </button>
+    <div class="ftx-footer-status" id="footer-status">
+      <span>💾 Änderungen noch nicht gespeichert</span>
+    </div>
+    <div class="ftx-footer-actions">
+      <button id="btn-toggle-width" class="ftx-button ftx-secondary" title="Breiten Modus umschalten (50%)">
+        ↔️ Breit
+      </button>
+      <button id="cancel-button" class="ftx-button">
+        Abbrechen
+      </button>
+      <button id="save-button" class="ftx-button ftx-success">
+        ✅ Speichern
+      </button>
+    </div>
   </div>
+
+  <button id="btn-quick-apply" class="ftx-button ftx-success" style="
+    position: fixed;
+    bottom: 75px;
+    right: 15px;
+    z-index: 999999;
+    font-size: 14px;
+    padding: 10px 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  " title="Checkboxen sofort aktualisieren">
+    ⚡ Sofort anwenden
+  </button>
 
   <script src="overlay.js"></script>
 </body>

@@ -1,350 +1,616 @@
 /* ============================================================
-   FormTexter Overlay - IFRAME-basiert (vollständig isoliert)
+   FORMTEXTER OVERLAY - UPGRADE
    URL-basierte Architektur (05.06.2026)
    ============================================================ */
 
-/* IFRAME-basiert: Kein Wrapper nötig, body IST das Overlay */
+/* ============================================================
+   BASIS-DESIGN
+   ============================================================ */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 0;
-  color: #333;
-  background-color: #f8f9fa;
+  color: #1a1a1a;
+  background-color: #f0f2f5;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  box-sizing: border-box;
 }
 
-/* Header */
+/* ============================================================
+   RESIZE HANDLE - Overlay breiter/schmaler ziehen
+   ============================================================ */
+.ftx-resize-handle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 100vh;
+  background: linear-gradient(to right, #007bff, #0056b3);
+  cursor: col-resize;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, width 0.1s;
+}
+
+.ftx-resize-handle:hover,
+.ftx-resize-handle.active {
+  background: linear-gradient(to right, #0056b3, #003d80);
+  width: 14px;
+}
+
+.ftx-resize-handle::after {
+  content: '⋮⋮';
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+.ftx-resize-indicator {
+  position: fixed;
+  top: 80px;
+  left: 18px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.ftx-resize-indicator.visible {
+  opacity: 1;
+}
+
+/* ============================================================
+   HEADER - Klare Identifikation & Status
+   ============================================================ */
 .ftx-overlay-header {
-  padding: 16px 20px;
-  background-color: #2c3e50;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%);
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-bottom: 3px solid #00d2ff;
+}
+
+.ftx-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  margin-right: 16px;
 }
 
 .ftx-overlay-header h1 {
   margin: 0;
-  font-size: 1.2em;
+  font-size: 1.3em;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.ftx-url-display-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.ftx-url-display-header .ftx-url-icon {
+  font-size: 1em;
+}
+
+.ftx-url-text {
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85em;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ftx-config-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  padding: 4px 10px;
+  border-radius: 12px;
   font-weight: 600;
+}
+
+.ftx-config-status-indicator.active {
+  background-color: rgba(40, 167, 69, 0.3);
+  border: 1px solid rgba(40, 167, 69, 0.6);
+}
+
+.ftx-config-status-indicator.inactive {
+  background-color: rgba(255, 193, 7, 0.3);
+  border: 1px solid rgba(255, 193, 7, 0.6);
 }
 
 .ftx-icon-button {
   background: none;
   border: none;
   color: white;
-  font-size: 1.5em;
+  font-size: 1.8em;
   cursor: pointer;
   padding: 0 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
 }
 
-/* Tabs */
+.ftx-icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================================
+   FORTSCHRITTSANZEIGE
+   ============================================================ */
+.ftx-progress-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.ftx-progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  position: relative;
+}
+
+.ftx-progress-step::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background-color: #e0e0e0;
+  z-index: 0;
+}
+
+.ftx-progress-step:last-child::after {
+  display: none;
+}
+
+.ftx-progress-step.completed::after {
+  background-color: #28a745;
+}
+
+.ftx-progress-step-line {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background-color: #e0e0e0;
+  z-index: 0;
+}
+
+.ftx-progress-step.completed .ftx-progress-step-line {
+  background-color: #28a745;
+}
+
+.ftx-progress-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85em;
+  z-index: 1;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.ftx-progress-step.active .ftx-progress-circle {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+}
+
+.ftx-progress-step.completed .ftx-progress-circle {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.ftx-progress-label {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #888;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.ftx-progress-step.active .ftx-progress-label {
+  color: #007bff;
+}
+
+.ftx-progress-step.completed .ftx-progress-label {
+  color: #28a745;
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
 .ftx-overlay-tabs {
   display: flex;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 2px solid #d0d0d0;
   flex-shrink: 0;
-  background-color: #fff;
+  background-color: #ffffff;
 }
 
 .ftx-tab-button {
-  padding: 12px 20px;
+  padding: 14px 24px;
   background: none;
   border: none;
   cursor: pointer;
   font-size: 1em;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   transition: all 0.2s;
+  font-weight: 500;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.ftx-tab-button::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: transparent;
+  transition: background-color 0.2s;
 }
 
 .ftx-tab-button:hover {
-  background-color: #e9ecef;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.ftx-tab-button:hover::after {
+  background-color: #adb5bd;
 }
 
 .ftx-tab-button.active {
-  border-bottom: 2px solid #007bff;
-  color: #007bff;
-  font-weight: 600;
-  background-color: #f0f7ff;
+  border-bottom: 3px solid #007bff;
+  color: #0056b3;
+  font-weight: 700;
+  background-color: #e8f4ff;
 }
 
-/* Tab Content */
+.ftx-tab-button .ftx-tab-icon {
+  font-size: 1.1em;
+}
+
+/* ============================================================
+   TAB CONTENT
+   ============================================================ */
 .ftx-overlay-content {
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  background-color: #f8f9fa;
+}
+
+.ftx-overlay-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ftx-overlay-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.ftx-overlay-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.ftx-overlay-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .ftx-tab-content {
   display: none;
-  padding: 20px;
+  padding: 24px 32px;
   height: 100%;
   box-sizing: border-box;
 }
 
 .ftx-tab-content.active {
   display: block;
+  animation: ftx-fadeIn 0.3s ease;
 }
 
-/* Instructions */
+@keyframes ftx-fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   INSTRUCTION BOXEN
+   ============================================================ */
 .ftx-instructions {
-  background-color: #e9f7fe;
-  padding: 12px 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border-left: 3px solid #007bff;
+  background: linear-gradient(to right, #e8f4ff, #f0f8ff);
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border-left: 4px solid #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.ftx-instructions h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.1em;
+  color: #0056b3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ftx-instructions h2::before {
+  content: '💡';
+  font-size: 1.2em;
+}
+
+.ftx-instructions p {
+  margin: 0;
+  color: #444;
+  line-height: 1.5;
 }
 
 .ftx-instructions code {
-  background-color: #f1f1f1;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.9em;
+  border: 1px solid #dee2e6;
 }
 
-/* URL Display */
+/* ============================================================
+   URL DISPLAY
+   ============================================================ */
 .ftx-url-display {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .ftx-url-display label {
   display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 0.95em;
 }
 
 .ftx-url-display code {
   display: block;
-  background-color: #f1f1f1;
-  padding: 10px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.9em;
+  background-color: #f8f9fa;
+  padding: 14px 16px;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.95em;
   word-break: break-all;
-  border: 1px solid #ddd;
+  border: 2px solid #dee2e6;
+  color: #212529;
 }
 
-/* Config Status */
+/* ============================================================
+   CONFIG STATUS
+   ============================================================ */
 .ftx-config-status {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+.ftx-config-status.has-config {
+  background-color: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.ftx-config-status.no-config {
+  background-color: #fff8e1;
+  border-color: #ffc107;
 }
 
 .ftx-config-status p {
-  margin: 0 0 12px 0;
-  font-weight: 600;
+  margin: 0 0 16px 0;
+  font-weight: 700;
+  font-size: 1.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Similar Configs */
+.ftx-config-status.has-config p {
+  color: #2e7d32;
+}
+
+.ftx-config-status.no-config p {
+  color: #b27b00;
+}
+
+/* ============================================================
+   SIMILAR CONFIGS
+   ============================================================ */
 .ftx-similar-configs {
-  margin-top: 16px;
+  margin-top: 20px;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.ftx-similar-configs summary {
+  font-weight: 700;
+  color: #007bff;
+  cursor: pointer;
+  padding: 8px 0;
 }
 
 .ftx-similar-configs ul {
-  margin: 8px 0 0 0;
+  margin: 12px 0 0 0;
   padding-left: 20px;
 }
 
 .ftx-similar-configs li {
-  margin-bottom: 4px;
-}
-
-/* Selected Field */
-.ftx-selected-field {
-  margin: 16px 0;
-  padding: 12px;
-  background-color: #fff;
-  border: 1px solid #ddd;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
   border-radius: 4px;
-}
-
-/* Action Buttons */
-.ftx-action-buttons {
-  margin: 16px 0;
-}
-
-.ftx-action-buttons .ftx-button {
-  width: 100%;
-  padding: 10px 16px;
-}
-
-/* Checkboxen Section */
-.ftx-checkboxes-section {
-  margin-top: 20px;
-}
-
-.ftx-checkboxes-section h3 {
-  margin: 16px 0 8px 0;
-}
-
-.ftx-checkboxes-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-
-.ftx-checkboxes-table th,
-.ftx-checkboxes-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.ftx-checkboxes-table th {
-  background-color: #f1f1f1;
-  font-weight: 600;
-}
-
-.ftx-checkboxes-table input[type="checkbox"] {
-  transform: scale(1.3);
+  border-left: 3px solid #007bff;
   cursor: pointer;
-}
-
-/* Mappings Section */
-.ftx-mappings-section {
-  margin-top: 16px;
-}
-
-.ftx-mappings-section h3 {
-  margin: 16px 0 8px 0;
-}
-
-/* Terms Container */
-.ftx-terms-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-height: 50px;
-}
-
-.ftx-term-tag {
-  display: inline-block;
-  background-color: #e9f1ff;
-  border: 1px solid #007bff;
-  color: #007bff;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.9em;
-  cursor: grab;
-  transition: all 0.2s;
-}
-
-.ftx-term-tag:hover {
-  background-color: #007bff;
-  color: white;
-}
-
-.ftx-term-tag.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-}
-
-/* Add Term Input */
-.ftx-add-term {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.ftx-add-term input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-/* Mappings Table */
-.ftx-mappings-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-
-.ftx-mappings-table th,
-.ftx-mappings-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.ftx-mappings-table th {
-  background-color: #f1f1f1;
-  font-weight: 600;
-}
-
-.ftx-mappings-table .delete-mapping {
-  color: #dc3545;
-  cursor: pointer;
-  text-align: center;
-  font-weight: bold;
-}
-
-.ftx-mappings-table .delete-mapping:hover {
-  color: #a71d2a;
-}
-
-/* Mapping Rows - Drag-and-Drop Ziel */
-.ftx-mapping-row {
-  cursor: default;
   transition: background-color 0.2s;
 }
 
-.ftx-mapping-row:hover {
-  background-color: #f0f7ff;
+.ftx-similar-configs li:hover {
+  background-color: #e3f2fd;
 }
 
-.ftx-mapping-row.drag-over {
-  background-color: #d0e8ff;
-  border-left: 3px solid #007bff;
-}
-
-/* Terms Container - Drop Zone Highlight */
-.ftx-terms-container.drop-active {
-  border-color: #007bff;
-  background-color: #f0f7ff;
-}
-
-/* Footer */
-.ftx-overlay-footer {
+/* ============================================================
+   SELECTED FIELD
+   ============================================================ */
+.ftx-selected-field {
+  margin: 20px 0;
   padding: 16px 20px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  border-top: 1px solid #ddd;
-  flex-shrink: 0;
-  background-color: #fff;
+  background: linear-gradient(135deg, #e8f5e9, #f1f8f1);
+  border: 2px solid #4caf50;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
 }
 
-/* Buttons */
+.ftx-selected-field p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.1em;
+  color: #2e7d32;
+}
+
+.ftx-no-selection {
+  background: linear-gradient(135deg, #fff3e0, #fff8e1);
+  border: 2px dashed #ff9800;
+}
+
+.ftx-no-selection p {
+  color: #e65100;
+}
+
+/* ============================================================
+   ACTION BUTTONS
+   ============================================================ */
+.ftx-action-buttons {
+  margin: 20px 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ftx-action-buttons .ftx-button {
+  flex: 1;
+  min-width: 200px;
+  padding: 14px 20px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
 .ftx-button {
-  padding: 8px 16px;
-  border: 1px solid #007bff;
-  background-color: white;
+  padding: 10px 20px;
+  border: 2px solid transparent;
+  background-color: #ffffff;
   color: #007bff;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.95em;
-  transition: all 0.2s;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .ftx-button:hover {
-  background-color: #e9f1ff;
+  background-color: #e8f4ff;
+  transform: translateY(-1px);
+}
+
+.ftx-button:active {
+  transform: translateY(0);
 }
 
 .ftx-button.ftx-primary {
-  background-color: #007bff;
+  background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
-  border-color: #007bff;
+  border-color: #0056b3;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .ftx-button.ftx-primary:hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #0069d9, #004a99);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.ftx-button.ftx-success {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+  border-color: #1e7e34;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.ftx-button.ftx-success:hover {
+  background: linear-gradient(135deg, #218838, #19692c);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
 }
 
 .ftx-button.ftx-danger {
@@ -358,32 +624,382 @@ body {
 }
 
 .ftx-button.small {
-  padding: 2px 8px;
+  padding: 6px 12px;
   font-size: 0.85em;
 }
 
 .ftx-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none !important;
 }
 
-/* Responsive */
-@media (max-width: 600px) {
+/* ============================================================
+   CHECKBOXEN TABLE
+   ============================================================ */
+.ftx-checkboxes-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ftx-checkboxes-table th,
+.ftx-checkboxes-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.ftx-checkboxes-table th {
+  background-color: #e9ecef;
+  font-weight: 700;
+  color: #495057;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ftx-checkboxes-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ftx-checkboxes-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.ftx-checkboxes-table input[type="checkbox"] {
+  transform: scale(1.4);
+  cursor: pointer;
+  accent-color: #007bff;
+}
+
+.ftx-checkboxes-table .cb-selected {
+  background-color: #e8f4ff;
+}
+
+.ftx-checkboxes-table .cb-label-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.ftx-checkboxes-table .cb-id-text {
+  font-family: 'Consolas', monospace;
+  font-size: 0.85em;
+  color: #666;
+}
+
+.ftx-checkboxes-table .cb-proximity-near {
+  color: #28a745;
+  font-weight: 700;
+}
+
+.ftx-checkboxes-table .cb-proximity-far {
+  color: #888;
+}
+
+/* ============================================================
+   TERMS CONTAINER
+   ============================================================ */
+.ftx-terms-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  background-color: #ffffff;
+  border: 2px dashed #adb5bd;
+  border-radius: 8px;
+  min-height: 60px;
+  transition: all 0.2s ease;
+}
+
+.ftx-terms-container.drop-active {
+  border-color: #007bff;
+  background-color: #e8f4ff;
+  border-style: solid;
+}
+
+.ftx-term-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: grab;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.2);
+  user-select: none;
+}
+
+.ftx-term-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.35);
+}
+
+.ftx-term-tag:active {
+  cursor: grabbing;
+}
+
+.ftx-term-tag.dragging {
+  opacity: 0.6;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+/* ============================================================
+   ADD TERM INPUT
+   ============================================================ */
+.ftx-add-term {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ftx-add-term input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.95em;
+  transition: border-color 0.2s;
+}
+
+.ftx-add-term input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+}
+
+/* ============================================================
+   MAPPINGS TABLE
+   ============================================================ */
+.ftx-mappings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ftx-mappings-table th,
+.ftx-mappings-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.ftx-mappings-table th {
+  background-color: #e9ecef;
+  font-weight: 700;
+  color: #495057;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ftx-mappings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ftx-mappings-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.ftx-mapping-row {
+  cursor: default;
+  transition: background-color 0.2s;
+}
+
+.ftx-mapping-row:hover {
+  background-color: #e8f4ff;
+}
+
+.ftx-mapping-row.drag-over {
+  background-color: #d0e8ff;
+  border-left: 4px solid #007bff;
+}
+
+.ftx-mapping-term {
+  font-weight: 600;
+  color: #007bff;
+}
+
+.ftx-mapping-checkbox {
+  font-family: 'Consolas', monospace;
+  font-size: 0.9em;
+  color: #495057;
+}
+
+.ftx-mappings-table .delete-mapping {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #dc3545;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.2em;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.ftx-mappings-table .delete-mapping:hover {
+  background-color: #f8d7da;
+  color: #a71d2a;
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.ftx-overlay-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 2px solid #dee2e6;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ftx-footer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.ftx-footer-status {
+  font-size: 0.85em;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.ftx-empty-state {
+  text-align: center;
+  padding: 30px 20px;
+  color: #888;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+}
+
+.ftx-empty-state p {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+.ftx-empty-state .ftx-empty-icon {
+  font-size: 2.5em;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+@media (max-width: 800px) {
+  .ftx-overlay-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .ftx-icon-button {
+    align-self: flex-end;
+  }
+  
   .ftx-overlay-tabs {
     flex-wrap: wrap;
   }
 
   .ftx-tab-button {
     flex: 1;
-    padding: 10px 8px;
+    padding: 12px 10px;
     font-size: 0.9em;
+    min-width: 120px;
+  }
+
+  .ftx-tab-content {
+    padding: 16px 20px;
   }
 
   .ftx-overlay-footer {
     flex-direction: column-reverse;
+    gap: 12px;
   }
 
-  .ftx-overlay-footer .ftx-button {
+  .ftx-overlay-footer .ftx-button,
+  .ftx-footer-actions {
     width: 100%;
   }
+  
+  .ftx-progress-bar {
+    padding: 10px 16px;
+  }
+  
+  .ftx-progress-label {
+    font-size: 0.65em;
+  }
+  
+  .ftx-progress-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75em;
+  }
+}
+
+@media (max-width: 500px) {
+  .ftx-tab-button {
+    flex: 1 1 100%;
+    padding: 10px 8px;
+    font-size: 0.85em;
+  }
+  
+  .ftx-action-buttons {
+    flex-direction: column;
+  }
+  
+  .ftx-action-buttons .ftx-button {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   ANIMATIONEN & FEEDBACK
+   ============================================================ */
+.ftx-highlight {
+  animation: ftx-pulse 0.5s ease;
+}
+
+@keyframes ftx-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.ftx-success-flash {
+  animation: ftx-successFlash 1s ease;
+}
+
+@keyframes ftx-successFlash {
+  0% { background-color: #e8f5e9; }
+  50% { background-color: #4caf50; color: white; }
+  100% { background-color: #e8f5e9; }
 }

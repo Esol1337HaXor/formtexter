@@ -3,10 +3,34 @@
   "version": "1.0.0",
   "description": "FormTexter - Firefox WebExtension zur Automatisierung von Formularen",
   "scripts": {
-    "start": "http-server -p 8000 --cors"
+    "start": "node start-server.js",
+    "stop": "node start-server.js stop",
+    "test": "npm run test:server && npm run test:run",
+    "test:server": "node start-server.js",
+    "test:run": "playwright test",
+    "test:quick": "playwright test --project=chromium",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "serve": "node start-server.js"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
-    "playwright": "^1.60.0"
-  }
+    "playwright": "^1.60.0",
+    "@playwright/test": "^1.60.0"
+  },
+  "keywords": [
+    "firefox",
+    "webextension",
+    "formautomation",
+    "checkbox",
+    "addon"
+  ],
+  "author": "Esol1337HaXor",
+  "license": "MIT",
+  "browserslist": [
+    "Firefox >= 90",
+    "Chrome >= 90",
+    "Edge >= 90"
+  ]
 }
