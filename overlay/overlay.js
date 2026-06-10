@@ -667,8 +667,8 @@ function closeOverlay() { window.parent.postMessage({ action: 'formtexter-overla
 
 function extractTermsFromString(text) {
   if (!text || !text.trim()) return [];
-  const STOP_WORDS = new Set(['und','oder','aber','denn','weil','wenn','bitte','auch','noch','habe','möchte','des','den','der','die','das','dem','von','zu','bei','um','an','mit','auf','in','nach','aus','sehr','viel','mehr','ist','sind','war','waren']);
-  return text.replace(/[.,;:!?(){}[\]]/g, ' ').split(/\s+/).map(w => w.trim()).filter(w => w.length > 3 && !STOP_WORDS.has(w.toLowerCase())).filter((w, idx, arr) => arr.indexOf(w) === idx).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  // Komma als einziges Trennzeichen - alles zwischen zwei Kommas ist ein Begriff
+  return text.split(',').map(t => t.trim()).filter(t => t.length > 0);
 }
 
 function updateMappingsTabDisplay() {
